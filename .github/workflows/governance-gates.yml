@@ -1,0 +1,98 @@
+name: Governance Gates
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  mandatory-checklists:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required PR checklists
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request?.body || "";
+            const requiredChecks = [
+              "Testes unitarios executados",
+              "Testes de integracao executados",
+              "Testes de regressao executados",
+              "Testes negativos executados",
+              "Evidencias anexadas (logs, prints, relatorios)",
+              "Entradas validadas e sanitizadas",
+              "Protecao contra SQL Injection",
+              "Autenticacao/autorizacao revisadas",
+              "Sem segredo hardcoded",
+              "Sem vazamento de dados sensiveis em logs/erros",
+              "Dependencias revisadas"
+            ];
+
+            const missing = requiredChecks.filter((item) => {
+              const escaped = item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+              const checked = new RegExp(`- \\[x\\]\\s+${escaped}`, "i");
+              return !checked.test(body);
+            });
+
+            if (missing.length > 0) {
+              core.setFailed(
+                "Checklist obrigatorio incompleto. Itens pendentes: " + missing.join(", ")
+              );
+            }
+
+  sensitive-db-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate DB/view approval when sensitive files change
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr?.body || "";
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pull_number = pr.number;
+
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              { owner, repo, pull_number, per_page: 100 }
+            );
+
+            const sensitivePatterns = [
+              /(^|\/)migrations?\//i,
+              /(^|\/)db\//i,
+              /(^|\/)database\//i,
+              /(^|\/)schema\//i,
+              /(^|\/)views?\//i,
+              /\.sql$/i
+            ];
+
+            const changedSensitive = files
+              .map((f) => f.filename)
+              .filter((name) => sensitivePatterns.some((p) => p.test(name)));
+
+            if (changedSensitive.length === 0) {
+              core.info("Nenhuma mudanca sensivel de banco/views detectada.");
+              return;
+            }
+
+            const requiredApprovalFields = [
+              /DB_APPROVAL:\s*YES/i,
+              /DB_APPROVER:\s*\S+/i,
+              /DB_SCOPE:\s*\S+/i,
+              /DB_ENV:\s*\S+/i,
+              /DB_WINDOW:\s*\S+/i
+            ];
+
+            const missingApproval = requiredApprovalFields.some((r) => !r.test(body));
+            if (missingApproval) {
+              core.setFailed(
+                "Mudanca sensivel de banco/views detectada sem aprovacao explicita completa na PR. Arquivos: " +
+                changedSensitive.join(", ")
+              );
+            } else {
+              core.info("Aprovacao de banco/views encontrada.");
+            }
