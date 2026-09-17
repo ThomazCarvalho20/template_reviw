@@ -1,0 +1,16 @@
+{% extends "account/base.html" %}
+
+{% block title %}Sair | Template Review{% endblock %}
+{% block auth_title %}Encerrar sessao{% endblock %}
+{% block auth_subtitle %}Confirme para sair da sua conta{% endblock %}
+
+{% block auth_content %}
+<form method="post" action="{% url 'account_logout' %}" class="form-grid">
+  {% csrf_token %}
+  {% if redirect_field_value %}
+    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+  {% endif %}
+  <button type="submit">Sair agora</button>
+  <a class="button button-outline" href="{% url 'dashboard' %}">Cancelar</a>
+</form>
+{% endblock %}

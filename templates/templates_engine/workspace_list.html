@@ -1,0 +1,62 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Ambientes | Template Review{% endblock %}
+{% block header %}Ambientes de Trabalho{% endblock %}
+
+{% block content %}
+<section class="grid-2">
+  <article class="card">
+    <h3>Novo ambiente</h3>
+    <form method="post" action="{% url 'workspace-create' %}" class="form-grid" style="margin-top:0.8rem;">
+      {% csrf_token %}
+      <input type="text" name="name" required placeholder="Nome do ambiente" />
+      <textarea name="description" rows="3" placeholder="Descricao (opcional)"></textarea>
+      <button type="submit">Criar ambiente</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h3>Solicitacoes pendentes</h3>
+    <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0.6rem;">
+      {% for req in pending_requests_for_owner %}
+        <li class="card card-subtle" style="padding:0.7rem;">
+          <strong>{{ req.requester.email }}</strong>
+          <p class="muted" style="margin:0.2rem 0 0;">Quer entrar em {{ req.workspace.name }}</p>
+          <form method="post" action="{% url 'workspace-request-decision' req.pk %}" class="inline-actions" style="margin-top:0.5rem;">
+            {% csrf_token %}
+            <button type="submit" name="decision" value="approve">Aprovar</button>
+            <button type="submit" name="decision" value="reject" class="button button-outline">Rejeitar</button>
+          </form>
+        </li>
+      {% empty %}
+        <li class="muted">Sem solicitacoes pendentes.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+
+<section class="card" style="margin-top:1rem;">
+  <h3>Meus ambientes</h3>
+  <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0.6rem;">
+    {% for membership in memberships %}
+      <li style="display:flex; justify-content:space-between; align-items:center; gap:0.6rem;">
+        <div>
+          <strong>{{ membership.workspace.name }}</strong>
+          <p class="muted" style="margin:0.2rem 0 0;">Papel: {{ membership.get_role_display }}</p>
+        </div>
+        <div class="inline-actions">
+          <a class="button button-outline" href="{% url 'workspace-detail' membership.workspace.pk %}">Entrar</a>
+          {% if membership.workspace.owner_id != request.user.id %}
+            <form method="post" action="{% url 'workspace-leave' membership.workspace.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="button button-danger">Sair</button>
+            </form>
+          {% endif %}
+        </div>
+      </li>
+    {% empty %}
+      <li class="muted">Voce ainda nao participa de ambientes.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

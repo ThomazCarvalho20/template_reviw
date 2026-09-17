@@ -1,0 +1,64 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Dashboard | Template Review{% endblock %}
+{% block header %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="grid-2">
+  <article class="card">
+    <h3>Painel operacional</h3>
+    <p class="muted">Gerencie templates, colaboracoes e historico de preenchimento em um unico fluxo.</p>
+    <div class="stack" style="margin-top:0.8rem;">
+      <a class="button" href="/templates/">Ir para templates</a>
+      <a class="button button-outline" href="/templates/novo/">Importar novo template</a>
+    </div>
+  </article>
+
+  <article class="card">
+    <h3>Checklist rapido</h3>
+    <ul class="muted" style="margin:0; padding-left:1rem; line-height:1.7;">
+      <li>Verificar e-mail da conta.</li>
+      <li>Importar arquivo DOCX, XLSX ou PDF.</li>
+      <li>Confirmar campos detectados via JSON.</li>
+      <li>Compartilhar ou convidar colaboradores.</li>
+    </ul>
+  </article>
+</section>
+
+<section class="card" style="margin-top:1rem;">
+  <h3>Pronto para producao</h3>
+  <p class="muted">Esta interface segue um padrao visual unificado, com componentes reutilizaveis, animações suaves e foco em clareza de uso.</p>
+</section>
+
+<section class="grid-2" style="margin-top:1rem;">
+  <article class="card">
+    <h3>Templates recentes</h3>
+    <p class="muted">Mostrando ate {{ items_limit }} itens conforme sua preferencia de configuracoes.</p>
+    <ul style="list-style:none; margin:0.8rem 0 0; padding:0; display:grid; gap:0.5rem;">
+      {% for template in recent_templates %}
+        <li style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+          <span>{{ template.name }}</span>
+          <a class="button button-outline" href="{% url 'template-detail' template.pk %}">Abrir</a>
+        </li>
+      {% empty %}
+        <li class="muted">Nenhum template encontrado.</li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  <article class="card">
+    <h3>Submissoes recentes</h3>
+    <p class="muted">Historico rapido das ultimas operacoes.</p>
+    <ul style="list-style:none; margin:0.8rem 0 0; padding:0; display:grid; gap:0.5rem;">
+      {% for submission in recent_submissions %}
+        <li style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+          <span>#{{ submission.id }} - {{ submission.template.name }}</span>
+          <span class="muted">{{ submission.created_at|date:"d/m/Y H:i" }}</span>
+        </li>
+      {% empty %}
+        <li class="muted">Sem submissoes recentes.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+{% endblock %}

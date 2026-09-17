@@ -63,3 +63,12 @@ Este documento define os requisitos minimos de seguranca para desenvolvimento, r
 
 - Mudancas sem validacao de seguranca e sem evidencias de teste nao podem ser implantadas.
 - Risco critico/alto sem mitigacao validada bloqueia merge e deploy.
+
+## 9) Automacao ativa neste repositorio
+
+- Workflow `Governance Gates` bloqueando PR sem checklist e sem aprovacao em mudancas sensiveis de banco/views.
+- Workflow `Python Security & Quality` com `ruff`, `black`, `bandit`, `pip-audit`, `pytest` e `manage.py check --deploy` quando aplicavel.
+- Workflow `Secret Scan` com `detect-secrets`.
+- `Dependabot` semanal para `pip` e `github-actions`.
+- `pre-commit` com hooks de qualidade e seguranca.
+- Baseline operacional em `docs/django_postgresql_security_baseline.md`.

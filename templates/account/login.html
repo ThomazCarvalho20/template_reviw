@@ -1,0 +1,40 @@
+{% extends "account/base.html" %}
+
+{% block title %}Entrar | Template Review{% endblock %}
+{% block auth_title %}Entrar{% endblock %}
+{% block auth_subtitle %}Use seu e-mail para acessar o sistema{% endblock %}
+
+{% block auth_content %}
+<form method="post" action="{% url 'account_login' %}" class="form-grid">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="flash error">
+      Credenciais invalidas. Verifique se o e-mail existe e se a senha esta correta.
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+  {% for field in form %}
+    {% if field.field.widget.input_type == "checkbox" %}
+      <label class="inline-check" for="{{ field.id_for_label }}">
+        {{ field }}
+        <span>{{ field.label }}</span>
+      </label>
+      {% if field.errors %}{{ field.errors }}{% endif %}
+    {% else %}
+      <div>
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}{{ field.errors }}{% endif %}
+      </div>
+    {% endif %}
+  {% endfor %}
+  {% if redirect_field_value %}
+    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+  {% endif %}
+  <button type="submit">Entrar</button>
+</form>
+
+<div class="auth-links">
+  Nao tem conta? <a class="button button-outline" href="{% url 'account_signup' %}">Criar conta</a>
+</div>
+{% endblock %}

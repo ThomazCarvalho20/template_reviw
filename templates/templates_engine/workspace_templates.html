@@ -1,0 +1,52 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Templates do Ambiente | Template Review{% endblock %}
+{% block header %}{{ workspace.name }} - Templates{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="page-head">
+    <h3 style="margin:0;">Templates do ambiente</h3>
+    <div class="inline-actions">
+      <a class="button button-outline" href="{% url 'workspace-detail' workspace.pk %}">Voltar ao ambiente</a>
+      <a class="button" href="{% url 'template-create' %}?workspace={{ workspace.pk }}">Novo template no ambiente</a>
+    </div>
+  </div>
+
+  <form method="get" class="form-grid" style="grid-template-columns: 1fr auto; margin-bottom:0.8rem;">
+    <input type="text" name="q" value="{{ current_q }}" placeholder="Buscar por nome ou descricao" />
+    <button type="submit">Buscar</button>
+  </form>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Dono</th>
+          <th>Status</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tpl in templates %}
+          <tr>
+            <td>{{ tpl.name }}</td>
+            <td>{{ tpl.owner.email }}</td>
+            <td>{{ tpl.get_status_display }}</td>
+            <td class="inline-actions">
+              <a class="button button-outline" href="{% url 'template-detail' tpl.pk %}">Detalhes</a>
+              <a class="button button-outline" href="{% url 'template-fill' tpl.pk %}">Preencher</a>
+              <a class="button button-outline" href="{% url 'template-audit' tpl.pk %}">Auditoria</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4" class="muted">Nenhum template vinculado ao ambiente.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

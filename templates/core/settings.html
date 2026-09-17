@@ -1,0 +1,124 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Configuracoes | Template Review{% endblock %}
+{% block header %}Configuracoes da conta{% endblock %}
+
+{% block content %}
+<section class="grid-2">
+  <article class="card">
+    <h3 id="perfil">Perfil</h3>
+    <p class="muted">Defina como seu nome aparece no sistema.</p>
+    <form method="post" enctype="multipart/form-data" class="form-grid" style="margin-top:0.8rem;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="profile" />
+      <div>
+        <label for="{{ profile_photo_form.profile_photo.id_for_label }}">Foto de perfil</label>
+        <label
+          class="profile-photo-editor"
+          for="{{ profile_photo_form.profile_photo.id_for_label }}"
+          title="Alterar foto de perfil"
+        >
+          {% if nav_user_settings and nav_user_settings.profile_photo %}
+            <img data-profile-preview src="{{ nav_user_settings.profile_photo.url }}" alt="Foto de perfil" />
+            <svg class="profile-photo-fallback" data-profile-fallback viewBox="0 0 24 24" fill="none" aria-hidden="true" style="display:none;">
+              <circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"></circle>
+              <path d="M5.5 18.2c1.3-2.8 3.6-4.2 6.5-4.2s5.2 1.4 6.5 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+            </svg>
+          {% else %}
+            <img data-profile-preview src="" alt="Foto de perfil" style="display:none;" />
+            <svg class="profile-photo-fallback" data-profile-fallback viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"></circle>
+              <path d="M5.5 18.2c1.3-2.8 3.6-4.2 6.5-4.2s5.2 1.4 6.5 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+            </svg>
+          {% endif %}
+          <span class="profile-photo-pencil" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M4 16.8V20h3.2l9.2-9.2-3.2-3.2L4 16.8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path>
+              <path d="m11.9 9 3.2 3.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+              <path d="m13.8 5.8 1.2-1.2a2.1 2.1 0 0 1 3 3L16.8 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+            </svg>
+          </span>
+        </label>
+        <p class="muted" style="margin:0.45rem 0 0; font-size:0.8rem;">Selecione uma foto para enviar direto, ou ajuste no editor se quiser.</p>
+      </div>
+      {% for field in profile_form %}
+        <div>
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}{{ field.errors }}{% endif %}
+        </div>
+      {% endfor %}
+      <div class="visually-hidden">
+        {{ profile_photo_form.profile_photo }}
+        <input type="hidden" name="profile_photo_cropped_data" id="profile_photo_cropped_data" />
+      </div>
+      {% if profile_photo_form.profile_photo.errors %}
+        {{ profile_photo_form.profile_photo.errors }}
+      {% endif %}
+      <button type="submit">Salvar perfil</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h3 id="notificacoes">Notificacoes e preferências</h3>
+    <p class="muted">Controle de alertas e comportamento da interface.</p>
+    <form method="post" class="form-grid" style="margin-top:0.8rem;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="preferences" />
+      <label class="inline-check" for="{{ settings_form.notify_invites.id_for_label }}">
+        {{ settings_form.notify_invites }}
+        <span>{{ settings_form.notify_invites.label }}</span>
+      </label>
+      {% if settings_form.notify_invites.errors %}{{ settings_form.notify_invites.errors }}{% endif %}
+
+      <label class="inline-check" for="{{ settings_form.notify_template_updates.id_for_label }}">
+        {{ settings_form.notify_template_updates }}
+        <span>{{ settings_form.notify_template_updates.label }}</span>
+      </label>
+      {% if settings_form.notify_template_updates.errors %}{{ settings_form.notify_template_updates.errors }}{% endif %}
+
+      <div>
+        <label for="{{ settings_form.items_per_page.id_for_label }}">{{ settings_form.items_per_page.label }}</label>
+        {{ settings_form.items_per_page }}
+        {% if settings_form.items_per_page.errors %}{{ settings_form.items_per_page.errors }}{% endif %}
+      </div>
+      <button type="submit">Salvar preferencias</button>
+    </form>
+  </article>
+</section>
+
+<section class="card" style="margin-top:1rem;">
+  <h3 id="seguranca">Seguranca da conta</h3>
+  <p class="muted">Acesso rapido para mudancas sensiveis.</p>
+  <div class="auth-actions">
+    <a class="button button-outline" href="/accounts/password/change/">Alterar senha</a>
+    <a class="button button-outline" href="/accounts/email/">Gerenciar e-mails</a>
+    <a class="button button-danger" href="/accounts/logout/">Sair da conta</a>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function() {
+    const input = document.getElementById("{{ profile_photo_form.profile_photo.id_for_label }}");
+    const preview = document.querySelector("[data-profile-preview]");
+    const fallback = document.querySelector("[data-profile-fallback]");
+    const croppedField = document.getElementById("profile_photo_cropped_data");
+    if (!input || !preview || !fallback) return;
+
+    let rawImageURL = "";
+
+    input.addEventListener("change", function() {
+      const [file] = input.files || [];
+      if (!file) return;
+      if (rawImageURL) URL.revokeObjectURL(rawImageURL);
+      rawImageURL = URL.createObjectURL(file);
+      preview.src = rawImageURL;
+      preview.style.display = "block";
+      fallback.style.display = "none";
+      if (croppedField) croppedField.value = "";
+    });
+  })();
+</script>
+{% endblock %}

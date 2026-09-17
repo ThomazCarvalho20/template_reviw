@@ -1,0 +1,153 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Detalhes do Template | Template Review{% endblock %}
+{% block header %}Detalhes: {{ template_obj.name }}{% endblock %}
+
+{% block content %}
+<section class="grid-2">
+  <article class="card">
+    <div style="display:flex; justify-content:space-between; gap:0.7rem; align-items:flex-start;">
+      <div>
+        <h3 style="margin:0;">{{ template_obj.name }}</h3>
+        <p class="muted" style="margin:0.4rem 0 0;">{{ template_obj.description|default:"Sem descricao." }}</p>
+      </div>
+      <span class="badge {% if template_obj.status == 'active' %}badge-ok{% else %}badge-off{% endif %}">{{ template_obj.get_status_display }}</span>
+    </div>
+
+    <div class="grid-2" style="margin-top:0.8rem;">
+      <div class="card" style="box-shadow:none;">
+        <h4>Informacoes gerais</h4>
+        <ul class="muted" style="line-height:1.8; padding-left:1rem;">
+          <li><strong>Tipo:</strong> {{ template_obj.file_type|upper }}</li>
+          <li><strong>Campos:</strong> {{ template_obj.fields_schema|length }}</li>
+          <li><strong>Seu papel:</strong> {{ current_role|default:"sem acesso" }}</li>
+        </ul>
+      </div>
+      <div class="card" style="box-shadow:none;">
+        <h4>Acoes</h4>
+        <div class="stack">
+          <a class="button" href="{% url 'template-fill' template_obj.pk %}">Abrir preenchimento</a>
+          <a class="button button-outline" href="{% url 'template-audit' template_obj.pk %}">Auditoria completa</a>
+          {% if is_owner and template_obj.status != 'closed' %}
+            <form method="post" action="{% url 'template-close' template_obj.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="button button-danger">Encerrar template</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="card">
+    <div style="display:flex; justify-content:space-between; gap:0.7rem; align-items:center;">
+      <h4 style="margin:0;">Submissoes recentes</h4>
+      <a class="button button-outline" href="{% url 'template-submissions-export' template_obj.pk %}?{{ submission_querystring }}">Exportar CSV</a>
+    </div>
+
+    <form method="get" class="form-grid" style="margin-top:0.7rem;">
+      <input type="text" name="submitted_by_email" value="{{ current_submitted_by_email }}" placeholder="E-mail do usuario" />
+      <div class="grid-2">
+        <input type="date" name="submitted_from" value="{{ current_submitted_from }}" />
+        <input type="date" name="submitted_to" value="{{ current_submitted_to }}" />
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <select name="has_output">
+          <option value="">Arquivo (todos)</option>
+          <option value="yes" {% if current_has_output == "yes" %}selected{% endif %}>Com arquivo</option>
+          <option value="no" {% if current_has_output == "no" %}selected{% endif %}>Sem arquivo</option>
+        </select>
+        <button type="submit">Filtrar</button>
+      </div>
+    </form>
+
+    <ul style="list-style:none; margin:0.8rem 0 0; padding:0; display:grid; gap:0.5rem;">
+      {% for submission in recent_submissions %}
+        <li style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+          <span>#{{ submission.id }} - {{ submission.created_at|date:"d/m/Y H:i" }} ({{ submission.submitted_by.email|default:"sistema" }})</span>
+          {% if submission.output_file %}<a class="button button-outline" href="{{ submission.output_file.url }}">Download</a>{% endif %}
+        </li>
+      {% empty %}
+        <li class="muted">Sem submissoes.</li>
+      {% endfor %}
+    </ul>
+
+    {% if submissions_is_paginated %}
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.7rem;">
+        <span class="muted">Pagina {{ submissions_page_obj.number }} de {{ submissions_page_obj.paginator.num_pages }}</span>
+        <div style="display:flex; gap:0.4rem;">
+          {% if submissions_page_obj.has_previous %}
+            <a class="button button-outline" href="?page_submissions={{ submissions_page_obj.previous_page_number }}&submitted_by_email={{ current_submitted_by_email }}&submitted_from={{ current_submitted_from }}&submitted_to={{ current_submitted_to }}&has_output={{ current_has_output }}">Anterior</a>
+          {% endif %}
+          {% if submissions_page_obj.has_next %}
+            <a class="button button-outline" href="?page_submissions={{ submissions_page_obj.next_page_number }}&submitted_by_email={{ current_submitted_by_email }}&submitted_from={{ current_submitted_from }}&submitted_to={{ current_submitted_to }}&has_output={{ current_has_output }}">Proxima</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </article>
+</section>
+
+{% if is_owner %}
+<section class="grid-2" style="margin-top:1rem;">
+  <article class="card">
+    <h4>Permissoes ativas</h4>
+    <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0.5rem;">
+      {% for permission in permissions %}
+        <li style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+          <span>{{ permission.user.email }}</span>
+          <div style="display:flex; gap:0.4rem; align-items:center;">
+            <form method="post" action="{% url 'template-permission-update' template_obj.pk permission.pk %}" style="display:flex; gap:0.3rem; align-items:center;">
+              {% csrf_token %}
+              <select name="role" style="width:auto; min-width:140px;">
+                {% for role_value, role_label in editable_roles %}
+                  <option value="{{ role_value }}" {% if permission.role == role_value %}selected{% endif %}>{{ role_label }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit">Salvar</button>
+            </form>
+            <form method="post" action="{% url 'template-permission-revoke' template_obj.pk permission.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="button button-danger">Revogar</button>
+            </form>
+          </div>
+        </li>
+      {% empty %}
+        <li class="muted">Sem permissoes adicionais.</li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  <article class="card">
+    <h4>Convites pendentes</h4>
+    <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0.5rem;">
+      {% for invite in pending_invites %}
+        <li style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+          <span>{{ invite.invited_email }} ({{ invite.get_role_display }})</span>
+          <form method="post" action="{% url 'template-invite-cancel' template_obj.pk invite.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="button button-danger">Cancelar</button>
+          </form>
+        </li>
+      {% empty %}
+        <li class="muted">Sem convites pendentes.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+{% endif %}
+
+<section class="card" style="margin-top:1rem;">
+  <h4>Auditoria recente</h4>
+  <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0.5rem;">
+    {% for log in recent_audit_logs %}
+      <li style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+        <span>{{ log.get_action_display }}</span>
+        <span class="muted">{{ log.created_at|date:"d/m/Y H:i:s" }}</span>
+      </li>
+    {% empty %}
+      <li class="muted">Sem eventos.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

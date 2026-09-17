@@ -1,0 +1,52 @@
+{% extends "account/base.html" %}
+
+{% block title %}E-mails | Template Review{% endblock %}
+{% block auth_title %}Gerenciar e-mails{% endblock %}
+{% block auth_subtitle %}Defina seu e-mail principal e confirme novos enderecos{% endblock %}
+
+{% block auth_content %}
+{% if user.emailaddress_set.all %}
+  <form method="post" action="{% url 'account_email' %}" class="form-grid">
+    {% csrf_token %}
+    {% for emailaddress in user.emailaddress_set.all %}
+      <label style="display:flex; align-items:center; gap:0.5rem;">
+        <input
+          type="radio"
+          name="email"
+          value="{{ emailaddress.email }}"
+          {% if emailaddress.primary %}checked{% endif %}
+          style="width:auto;"
+        />
+        <span>
+          {{ emailaddress.email }}
+          {% if emailaddress.primary %}<strong>(principal)</strong>{% endif %}
+          {% if emailaddress.verified %}<span class="muted">(verificado)</span>{% else %}<span class="muted">(pendente)</span>{% endif %}
+        </span>
+      </label>
+    {% endfor %}
+    <div class="auth-actions">
+      <button type="submit" name="action_primary">Definir principal</button>
+      <button type="submit" name="action_send">Reenviar verificacao</button>
+      <button type="submit" name="action_remove" class="button button-danger">Remover</button>
+    </div>
+  </form>
+{% endif %}
+
+<hr style="border:none; border-top:1px solid var(--border); margin:1rem 0;" />
+
+<form method="post" action="{% url 'account_email' %}" class="form-grid">
+  {% csrf_token %}
+  {% for field in form %}
+    <div>
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}{{ field.errors }}{% endif %}
+    </div>
+  {% endfor %}
+  <button type="submit" name="action_add">Adicionar e-mail</button>
+</form>
+
+<div class="auth-links">
+  <a class="button button-outline" href="{% url 'dashboard' %}">Voltar ao painel</a>
+</div>
+{% endblock %}

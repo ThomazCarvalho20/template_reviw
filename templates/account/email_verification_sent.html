@@ -1,0 +1,15 @@
+{% extends "account/base.html" %}
+
+{% block title %}Verificacao enviada | Template Review{% endblock %}
+{% block auth_title %}Verificacao enviada{% endblock %}
+{% block auth_subtitle %}Enviamos um link para seu e-mail{% endblock %}
+
+{% block auth_content %}
+<p class="muted">
+  Confira sua caixa de entrada e tambem a pasta de spam. A confirmacao do e-mail e obrigatoria para usar o sistema.
+</p>
+<div class="auth-actions">
+  <a class="button" href="{% url 'account_email' %}">Gerenciar e-mails</a>
+  <a class="button button-outline" href="{% url 'account_login' %}">Voltar ao login</a>
+</div>
+{% endblock %}

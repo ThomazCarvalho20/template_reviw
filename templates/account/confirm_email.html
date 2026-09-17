@@ -1,0 +1,20 @@
+{% extends "account/base.html" %}
+
+{% block title %}Confirmar e-mail | Template Review{% endblock %}
+{% block auth_title %}Confirmar e-mail{% endblock %}
+{% block auth_subtitle %}Valide seu endereco para liberar o acesso{% endblock %}
+
+{% block auth_content %}
+{% if confirmation %}
+  <p class="muted">Confirme o endereco <strong>{{ confirmation.email_address.email }}</strong>.</p>
+  <form method="post" action="{% url 'account_confirm_email' confirmation.key %}" class="form-grid">
+    {% csrf_token %}
+    <button type="submit">Confirmar e-mail</button>
+  </form>
+{% else %}
+  <div class="flash alert">Este link de confirmacao e invalido ou expirou.</div>
+  <div class="auth-actions">
+    <a class="button" href="{% url 'account_email' %}">Solicitar novo link</a>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Editar Grupo | Template Review{% endblock %}
+{% block header %}Grupo: {{ group.name }}{% endblock %}
+
+{% block content %}
+<section class="grid-2">
+  <article class="card">
+    <h3>Editar grupo</h3>
+    <form method="post" class="form-grid" style="margin-top:0.8rem;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update_group" />
+      <div>
+        <label for="{{ group_update_form.name.id_for_label }}">Nome</label>
+        {{ group_update_form.name }}
+        {% if group_update_form.name.errors %}{{ group_update_form.name.errors }}{% endif %}
+      </div>
+      <div>
+        <label for="{{ group_update_form.members_raw.id_for_label }}">Membros (e-mails)</label>
+        {{ group_update_form.members_raw }}
+        {% if group_update_form.members_raw.errors %}{{ group_update_form.members_raw.errors }}{% endif %}
+      </div>
+      <button type="submit">Salvar alteracoes</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h3>Vinculo com ambientes</h3>
+    <p class="muted">Adicione ou remova este grupo de um ambiente com um clique.</p>
+    <form method="post" class="form-grid" style="margin-top:0.8rem;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_group_to_workspace" />
+      <select name="workspace_id" required>
+        <option value="">Selecione ambiente</option>
+        {% for workspace in workspaces %}
+          <option value="{{ workspace.pk }}">{{ workspace.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Adicionar grupo ao ambiente</button>
+    </form>
+
+    <form method="post" class="form-grid" style="margin-top:0.7rem;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="remove_group_from_workspace" />
+      <select name="workspace_id" required>
+        <option value="">Selecione ambiente</option>
+        {% for workspace in workspaces %}
+          <option value="{{ workspace.pk }}">{{ workspace.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="button button-danger">Remover grupo do ambiente</button>
+    </form>
+  </article>
+</section>
+{% endblock %}

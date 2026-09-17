@@ -1,0 +1,70 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Auditoria | Template Review{% endblock %}
+{% block header %}Auditoria: {{ template_obj.name }}{% endblock %}
+
+{% block content %}
+<section class="card">
+  <div class="page-head">
+    <h3 style="margin:0;">Historico de acoes</h3>
+    <a class="button button-outline" href="{% url 'template-audit-export' template_obj.pk %}?{{ querystring }}">Exportar CSV</a>
+  </div>
+
+  <form method="get" class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom:0.9rem;">
+    <select name="action">
+      <option value="">Acao (todas)</option>
+      {% for value, label in action_options %}
+        <option value="{{ value }}" {% if current_action == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="actor_email" value="{{ current_actor_email }}" placeholder="E-mail do usuario" />
+    <input type="date" name="date_from" value="{{ current_date_from }}" />
+    <input type="date" name="date_to" value="{{ current_date_to }}" />
+    <div class="inline-actions">
+      <button type="submit">Filtrar</button>
+      <a class="button button-outline" href="{% url 'template-audit' template_obj.pk %}">Limpar</a>
+    </div>
+  </form>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Acao</th>
+          <th>Usuario</th>
+          <th>Detalhes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in audit_logs %}
+          <tr>
+            <td>{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
+            <td>{{ log.get_action_display }}</td>
+            <td>{{ log.actor.email|default:"sistema" }}</td>
+            <td><code style="font-size:0.75rem;">{{ log.metadata }}</code></td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td class="muted" colspan="4">Nenhum evento de auditoria registrado.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if is_paginated %}
+    <div class="page-head" style="margin-top:0.9rem; margin-bottom:0;">
+      <span class="muted">Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+      <div class="inline-actions">
+        {% if page_obj.has_previous %}
+          <a class="button button-outline" href="?page={{ page_obj.previous_page_number }}&action={{ current_action }}&actor_email={{ current_actor_email }}&date_from={{ current_date_from }}&date_to={{ current_date_to }}">Anterior</a>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <a class="button button-outline" href="?page={{ page_obj.next_page_number }}&action={{ current_action }}&actor_email={{ current_actor_email }}&date_from={{ current_date_from }}&date_to={{ current_date_to }}">Proxima</a>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

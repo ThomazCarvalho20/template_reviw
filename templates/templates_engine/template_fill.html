@@ -1,0 +1,66 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Preencher Template | Template Review{% endblock %}
+{% block header %}Preencher: {{ template_obj.name }}{% endblock %}
+
+{% block content %}
+<section class="grid-2">
+  <article class="card">
+    <h3>Formulario dinamico</h3>
+    <p class="muted">Os campos abaixo foram montados automaticamente a partir do JSON identificado no template.</p>
+
+    {% if not can_submit %}
+      <div class="flash" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412;">
+        Este template esta em modo somente leitura para seu perfil ({{ current_role|default:"sem acesso de envio" }}).
+      </div>
+    {% endif %}
+
+    <form method="post" class="form-grid" style="margin-top:0.8rem;">
+      {% csrf_token %}
+      {% for field in form %}
+        <div>
+          <label>{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p style="color:#be123c; font-size:0.8rem; margin:0.4rem 0 0;">{{ field.errors|join:", " }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" {% if not can_submit %}disabled{% endif %}>Salvar preenchimento</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h3>Resumo do template</h3>
+    <p class="muted" style="margin-top:0;">Controle de status, acesso rapido e ultimos arquivos gerados.</p>
+
+    <div class="stack">
+      <a class="button button-outline" href="{% url 'template-detail' template_obj.pk %}">Ver detalhes completos</a>
+      <a class="button button-outline" href="{% url 'template-audit' template_obj.pk %}">Ver auditoria completa</a>
+    </div>
+
+    <ul class="muted" style="line-height:1.8; padding-left:1rem; margin-top:0.8rem;">
+      <li><strong>Nome:</strong> {{ template_obj.name }}</li>
+      <li><strong>Tipo:</strong> {{ template_obj.file_type|upper }}</li>
+      <li><strong>Status:</strong> {{ template_obj.get_status_display }}</li>
+      <li><strong>Campos detectados:</strong> {{ template_obj.fields_schema|length }}</li>
+    </ul>
+
+    <h4 style="margin-top:1rem;">Ultimas saidas geradas</h4>
+    <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0.5rem;">
+      {% for submission in recent_submissions %}
+        <li style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+          <span>#{{ submission.id }} - {{ submission.created_at|date:"d/m/Y H:i" }}</span>
+          {% if submission.output_file %}
+            <a class="button button-outline" href="{{ submission.output_file.url }}">Download</a>
+          {% else %}
+            <span class="muted">sem arquivo</span>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li class="muted">Nenhuma saida gerada ainda.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Novo Template | Template Review{% endblock %}
+{% block header %}Importar template{% endblock %}
+
+{% block content %}
+<div class="template-create-shell">
+  <section class="card">
+    <div class="template-create-head">
+      <div>
+        <h3 style="margin:0;">Novo template</h3>
+        <p class="muted" style="margin:0.35rem 0 0;">Importe PDF, DOCX ou XLSX com validação de tipo real e tamanho.</p>
+      </div>
+      <span class="badge badge-ok">Fluxo guiado</span>
+    </div>
+  </section>
+
+  <section class="template-create-grid">
+    <article class="card">
+      <form method="post" enctype="multipart/form-data" class="form-grid" data-template-create-form>
+        {% csrf_token %}
+        {% if request.GET.workspace %}
+          <input type="hidden" name="workspace_id" value="{{ request.GET.workspace }}" />
+        {% endif %}
+
+        <div class="upload-zone" data-upload-zone>
+          <p class="upload-zone-title">1. Selecione o arquivo do template</p>
+          <p class="upload-zone-sub">Arraste e solte aqui ou use o campo abaixo para escolher.</p>
+          <div style="margin-top:0.7rem;">
+            {% for field in form %}
+              {% if field.name == "file" %}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                  <p style="color:#be123c; font-size:0.8rem; margin:0.4rem 0 0;">{{ field.errors|join:", " }}</p>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          </div>
+          <div class="upload-meta" data-upload-meta>Nenhum arquivo selecionado.</div>
+        </div>
+
+        <div>
+          {% for field in form %}
+            {% if field.name == "name" or field.name == "description" or field.name == "file_type" %}
+              <div style="margin-top:0.7rem;">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                  <p style="color:#be123c; font-size:0.8rem; margin:0.4rem 0 0;">{{ field.errors|join:", " }}</p>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="inline-actions" style="margin-top:0.9rem;">
+          <button type="submit">Importar template</button>
+          <a class="button button-outline" href="/templates/">Cancelar</a>
+        </div>
+      </form>
+    </article>
+
+    <aside class="card">
+      <h4 style="margin-top:0;">Checklist de importação</h4>
+      <ul class="checklist">
+        <li>Defina um nome claro para o template.</li>
+        <li>Selecione o tipo correto do arquivo.</li>
+        <li>Confira se os campos JSON foram inseridos no documento.</li>
+        <li>Após importar, valide no preenchimento dinâmico.</li>
+      </ul>
+    </aside>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (() => {
+    const form = document.querySelector("[data-template-create-form]");
+    if (!form) return;
+    const fileInput = form.querySelector('input[type="file"]');
+    const zone = form.querySelector("[data-upload-zone]");
+    const meta = form.querySelector("[data-upload-meta]");
+    if (!fileInput || !zone || !meta) return;
+
+    const formatSize = (bytes) => {
+      if (bytes < 1024) return `${bytes} B`;
+      const kb = bytes / 1024;
+      if (kb < 1024) return `${kb.toFixed(1)} KB`;
+      return `${(kb / 1024).toFixed(2)} MB`;
+    };
+
+    const updateMeta = () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        meta.textContent = "Nenhum arquivo selecionado.";
+        return;
+      }
+      meta.textContent = `Arquivo: ${file.name} | Tamanho: ${formatSize(file.size)}`;
+    };
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      zone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        zone.classList.add("is-dragover");
+      });
+    });
+    ["dragleave", "drop"].forEach((eventName) => {
+      zone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        zone.classList.remove("is-dragover");
+      });
+    });
+    zone.addEventListener("drop", (event) => {
+      const files = event.dataTransfer?.files;
+      if (!files || !files.length) return;
+      fileInput.files = files;
+      updateMeta();
+    });
+    fileInput.addEventListener("change", updateMeta);
+    updateMeta();
+  })();
+</script>
+{% endblock %}

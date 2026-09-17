@@ -1,4 +1,65 @@
-KJHg\mnb
-KJHg\mnb.pub
-KJHg\mnb
-KJHg\mnb.pub
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+ENV/
+
+# Testes, cobertura e análise
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Variáveis de ambiente e segredos locais
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# Logs e arquivos temporários
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDEs e editores
+.idea/
+.vscode/
+*.code-workspace
+
+# Sistema operacional
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+
+# Ferramentas locais
+.ipynb_checkpoints/
+.cache/

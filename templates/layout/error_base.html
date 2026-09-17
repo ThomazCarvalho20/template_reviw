@@ -1,0 +1,26 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Erro | Template Review{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/app.css' %}" />
+  </head>
+  <body>
+    <main class="error-shell">
+      <section class="card error-card">
+        <p class="error-code">{% block error_code %}000{% endblock %}</p>
+        <h1 class="error-title">{% block error_title %}Algo nao saiu como esperado{% endblock %}</h1>
+        <p class="error-text">{% block error_text %}Tente novamente em instantes.{% endblock %}</p>
+        <div class="auth-actions" style="justify-content:center; margin-top:1.1rem;">
+          <a class="button" href="/">Ir para dashboard</a>
+          <a class="button button-outline" href="/templates/">Ir para templates</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

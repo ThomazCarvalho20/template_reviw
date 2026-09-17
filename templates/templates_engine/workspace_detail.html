@@ -1,0 +1,124 @@
+{% extends "layout/base.html" %}
+
+{% block title %}{{ workspace.name }} | Ambiente{% endblock %}
+{% block header %}Ambiente: {{ workspace.name }}{% endblock %}
+
+{% block content %}
+<section class="grid-2">
+  <article class="card">
+    <h3>Resumo</h3>
+    <p class="muted">{{ workspace.description|default:"Sem descricao." }}</p>
+    <p class="muted">Criador: {{ workspace.owner.email }}</p>
+    <p class="muted">Conectados agora: {{ online_memberships|length }}</p>
+  </article>
+
+  <article class="card">
+    <h3>Membros conectados</h3>
+    <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0.5rem;">
+      {% for member in online_memberships %}
+        <li>{{ member.user.email }}</li>
+      {% empty %}
+        <li class="muted">Ninguem conectado neste momento.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+
+<section class="grid-2" style="margin-top:1rem;">
+  <article class="card">
+    <h3>Templates do ambiente</h3>
+    <div class="inline-actions" style="margin-bottom:0.7rem;">
+      <a class="button" href="{% url 'template-create' %}?workspace={{ workspace.pk }}">Importar novo template no ambiente</a>
+      <a class="button button-outline" href="{% url 'workspace-templates' workspace.pk %}">Ver todos os templates</a>
+    </div>
+    <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0.6rem;">
+      {% for tpl in workspace_templates %}
+        <li style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+          <span>{{ tpl.name }}</span>
+          <a class="button button-outline" href="{% url 'template-detail' tpl.pk %}">Abrir</a>
+        </li>
+      {% empty %}
+        <li class="muted">Nenhum template no ambiente.</li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  <article class="card">
+    <h3>Vincular template existente</h3>
+    <form method="post" action="{% url 'workspace-attach-template' workspace.pk %}" class="form-grid" style="margin-top:0.7rem;">
+      {% csrf_token %}
+      <select name="template_id" required>
+        <option value="">Selecione template</option>
+        {% for tpl in available_templates %}
+          <option value="{{ tpl.pk }}">{{ tpl.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Vincular ao ambiente</button>
+    </form>
+  </article>
+</section>
+
+{% if can_manage %}
+<section class="grid-2" style="margin-top:1rem;">
+  <article class="card">
+    <h3>Adicionar membros por e-mail</h3>
+    <form method="post" action="{% url 'workspace-add-members' workspace.pk %}" class="form-grid">
+      {% csrf_token %}
+      <textarea name="members_raw" rows="4" required placeholder="email1@dominio.com, email2@dominio.com"></textarea>
+      <button type="submit">Adicionar membros</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h3>Adicionar grupo ao ambiente</h3>
+    <form method="post" action="{% url 'workspace-add-group' workspace.pk %}" class="form-grid">
+      {% csrf_token %}
+      <select name="group_id" required>
+        <option value="">Selecione um grupo</option>
+        {% for group in share_groups_for_owner %}
+          <option value="{{ group.pk }}">{{ group.name }} ({{ group.members.count }})</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Adicionar grupo</button>
+    </form>
+  </article>
+</section>
+
+<section class="grid-2" style="margin-top:1rem;">
+  <article class="card">
+    <h3>Membros do ambiente</h3>
+    <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0.5rem;">
+      {% for member in memberships %}
+        <li style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+          <span>{{ member.user.email }} ({{ member.get_role_display }})</span>
+          {% if workspace.owner_id == request.user.id and member.user_id != request.user.id %}
+            <form method="post" action="{% url 'workspace-remove-member' workspace.pk member.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="button button-danger">Expulsar</button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  <article class="card">
+    <h3>Atalho de grupos</h3>
+    <p class="muted">Gerencie grupos em <a href="{% url 'group-list' %}">Grupos</a> e depois use esta tela para adicionar ao ambiente.</p>
+  </article>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  setInterval(() => {
+    fetch("{% url 'workspace-heartbeat' workspace.pk %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+      },
+    });
+  }, 45000);
+</script>
+{% endblock %}

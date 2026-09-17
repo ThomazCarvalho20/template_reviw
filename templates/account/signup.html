@@ -1,0 +1,38 @@
+{% extends "account/base.html" %}
+
+{% block title %}Cadastro | Template Review{% endblock %}
+{% block auth_title %}Criar conta{% endblock %}
+{% block auth_subtitle %}Cadastro com verificacao por e-mail{% endblock %}
+
+{% block auth_content %}
+<div class="flash alert" style="margin-bottom:0.8rem;">
+  A senha deve ter no minimo 6 caracteres.
+</div>
+<form method="post" action="{% url 'account_signup' %}" class="form-grid">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="flash error">
+      Nao foi possivel concluir o cadastro. Revise os campos informados.
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+  {% for field in form %}
+    <div>
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}
+        <p class="muted" style="margin:0.35rem 0 0; font-size:0.8rem;">{{ field.help_text|safe }}</p>
+      {% endif %}
+      {% if field.errors %}{{ field.errors }}{% endif %}
+    </div>
+  {% endfor %}
+  {% if redirect_field_value %}
+    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+  {% endif %}
+  <button type="submit">Criar conta</button>
+</form>
+
+<div class="auth-links">
+  Ja tem conta? <a class="button button-outline" href="{% url 'account_login' %}">Voltar para login</a>
+</div>
+{% endblock %}

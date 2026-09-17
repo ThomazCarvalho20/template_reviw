@@ -1,0 +1,41 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Grupos | Template Review{% endblock %}
+{% block header %}Grupos{% endblock %}
+
+{% block content %}
+<section class="grid-2">
+  <article class="card">
+    <h3>Criar grupo</h3>
+    <p class="muted">Cadastre grupos por e-mail para compartilhar templates de uma vez.</p>
+    <form method="post" action="{% url 'template-group-create' %}" class="form-grid" style="margin-top:0.8rem;">
+      {% csrf_token %}
+      <input type="text" name="name" required placeholder="Nome do grupo" />
+      <textarea name="members_raw" rows="4" required placeholder="email1@dominio.com, email2@dominio.com"></textarea>
+      <button type="submit">Salvar grupo</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h3>Grupos cadastrados</h3>
+    <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0.6rem;">
+      {% for group in groups %}
+        <li class="card card-subtle" style="padding:0.7rem;">
+          <div style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+            <strong>{{ group.name }}</strong>
+            <a class="button button-outline" href="{% url 'group-detail' group.pk %}">Editar</a>
+          </div>
+          <p class="muted" style="margin:0.3rem 0 0;">{{ group.members.count }} membro(s)</p>
+          <p class="muted" style="margin:0.5rem 0 0; font-size:0.82rem;">
+            {% for member in group.members.all %}
+              {{ member.email }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </p>
+        </li>
+      {% empty %}
+        <li class="muted">Nenhum grupo cadastrado.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+{% endblock %}
