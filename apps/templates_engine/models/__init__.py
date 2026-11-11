@@ -40,3 +40,19 @@ __all__ = [
     "AuditAction",
     "TemplateAuditLog",
 ]
+
+from .institution import (
+    DocumentRequest,
+    DocumentRequestEvent,
+    Institution,
+    InstitutionMembership,
+    SubmissionShare,
+)
+
+__all__ += [
+    "Institution",
+    "InstitutionMembership",
+    "DocumentRequest",
+    "DocumentRequestEvent",
+    "SubmissionShare",
+]

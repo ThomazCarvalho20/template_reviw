@@ -24,7 +24,9 @@ class ProfilePhotoForm(forms.ModelForm):
             "profile_photo": "Foto de perfil",
         }
         widgets = {
-            "profile_photo": forms.ClearableFileInput(attrs={"accept": "image/png,image/jpeg,image/webp"}),
+            "profile_photo": forms.ClearableFileInput(
+                attrs={"accept": "image/png,image/jpeg,image/webp"}
+            ),
         }
 
 

@@ -1,0 +1,4 @@
+{% extends "layout/base.html" %}
+{% block title %}Aceitar convite | EducaDoc Social{% endblock %}
+{% block header %}Convite para colaboração{% endblock %}
+{% block content %}<section class="card"><h3>Confirmar aceite</h3><p>O convite foi enviado para {{ invite.invited_email }}. Confirme para receber acesso ao modelo.</p>{% if invite.status == 'pending' %}<form method="post">{% csrf_token %}<button type="submit">Aceitar convite</button></form>{% else %}<p>Este convite não está mais pendente.</p>{% endif %}</section>{% endblock %}

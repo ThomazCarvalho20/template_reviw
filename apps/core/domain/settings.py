@@ -3,7 +3,7 @@ import base64
 from django.core.files.base import ContentFile
 
 from apps.core.domain.selectors import CoreSelector
-from apps.core.models import ProfilePhotoDisplayScope, UserSettings
+from apps.core.models import ProfilePhotoDisplayScope
 
 
 class SettingsService:

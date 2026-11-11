@@ -1,5 +1,9 @@
 from .group import GroupDetailView, GroupListView, TemplateShareGroupCreateView
-from .notification import NotificationFeedView, NotificationMarkAllReadView, NotificationMarkReadView
+from .notification import (
+    NotificationFeedView,
+    NotificationMarkAllReadView,
+    NotificationMarkReadView,
+)
 from .template import (
     TemplateAuditExportCsvView,
     TemplateAuditListView,

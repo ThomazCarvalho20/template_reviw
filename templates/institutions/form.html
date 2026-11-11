@@ -1,0 +1,4 @@
+{% extends "layout/base.html" %}
+{% block title %}Cadastro institucional | EducaDoc Social{% endblock %}
+{% block header %}Cadastro institucional{% endblock %}
+{% block content %}<section class="card"><form method="post" class="form-grid">{% csrf_token %}{{ form.as_p }}<div class="inline-actions flex flex-wrap gap-2"><button type="submit">Salvar</button><a class="button button-outline" href="{% url 'institution-list' %}">Voltar</a></div></form></section>{% endblock %}

@@ -1,60 +1,55 @@
-# Deploy em Producao
+# Deploy do EducaDoc Social
 
-## 1) Preparacao
+A configuração disponível usa PostgreSQL 16, Gunicorn e WhiteNoise. Os arquivos de execução usam CSS já compilado; não é necessário Node.js no contêiner Python.
 
-1. Copie `.env.production.example` para `.env.production`.
-2. Preencha segredos reais (`SECRET_KEY`, `DB_PASSWORD`, SMTP).
-3. Ajuste dominio em `ALLOWED_HOSTS` e `CSRF_TRUSTED_ORIGINS`.
+## Preparação
 
-## 2) Subir stack
+1. Copie `.env.production.example` para `.env.production` e preencha valores reais de domínio, chave secreta, banco e SMTP. O exemplo de produção agora é versionável; arquivos com credenciais reais permanecem ignorados.
+2. Mantenha `USE_SQLITE=False`, `DB_HOST=db` e `DB_PORT=5432` na rede Compose. `DATABASE_URL` não é interpretada.
+3. O `.dockerignore` exclui `.env` e arquivos de ambiente reais. Não acrescente credenciais à imagem ou ao repositório.
+4. O CSS compilado acompanha o código em `static/css/tailwind.css`. Não é necessário executar uma compilação frontend para iniciar esta distribuição.
+5. Configure proxy reverso com HTTPS. Sirva os arquivos estáticos coletados por WhiteNoise. Mantenha os documentos de mídia fora de rotas públicas; downloads passam pela aplicação.
+6. Planeje backup e restauração conjunta de PostgreSQL e mídia, SMTP, monitoramento e armazenamento persistente. Avalie TLS do banco para serviços externos; `DATABASES` não define `sslmode` automaticamente.
 
-```bash
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
-```
+## Inicialização autorizada
 
-## 3) Verificacoes
-
-1. Healthcheck:
-
-```bash
-curl -f http://localhost:8000/healthz/
-```
-
-2. Logs da aplicacao:
+O entrypoint não executa migrações automaticamente por padrão. Em ambientes administrados por outra pessoa ou em produção, obtenha autorização para a alteração do banco. Após revisar o plano, execute:
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f web
+docker compose -f docker-compose.prod.yml --env-file .env.production build
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d db
+docker compose -f docker-compose.prod.yml --env-file .env.production run --rm web python manage.py migrate --plan
+docker compose -f docker-compose.prod.yml --env-file .env.production run --rm web python manage.py migrate --noinput
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d web
 ```
 
-3. Logs do banco:
+O entrypoint aguarda PostgreSQL por até `DB_WAIT_TIMEOUT_SECONDS` (padrão 60), executa comandos explícitos quando fornecidos e, no início normal do web, coleta estáticos antes de iniciar Gunicorn. `RUN_MIGRATIONS=true` habilita migração automática somente se isso fizer parte da operação aprovada.
+
+Para criar o administrador em uma instalação autorizada:
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f db
+docker compose -f docker-compose.prod.yml --env-file .env.production exec web python manage.py createsuperuser
 ```
 
-## 4) Comandos uteis
+Acesse Instituições para cadastrar responsáveis e vínculos. Não há seed de dados acadêmicos nem contas padrão.
 
-- Reaplicar migrations manualmente:
+## Verificação
+
+Consulte `/healthz/` no endereço final com HTTPS e valide cadastro, confirmação de e-mail real, importação, edição de campos, emissão, download privado e atendimento de solicitações. O endpoint verifica `SELECT 1`; não comprova SMTP, backup ou todos os fluxos.
 
 ```bash
-docker compose -f docker-compose.prod.yml exec web python manage.py migrate --noinput
+docker compose -f docker-compose.prod.yml --env-file .env.production logs -f web
+docker compose -f docker-compose.prod.yml --env-file .env.production logs -f db
 ```
 
-- Criar superusuario:
+O volume de mídia deve ser privado. Em desenvolvimento, apenas fotos de perfil continuam com rota de mídia direta; modelos e emissões têm rotas de download autenticadas. Defina a política de entrega de fotos em produção separadamente.
 
-```bash
-docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
-```
+Antes de disponibilizar a instalação, confirme:
 
-- Coletar estaticos:
+- `/healthz/` responde HTTP 200 no endereço final.
+- O acesso HTTPS, os hosts e as origens CSRF correspondem ao domínio.
+- A conta administradora funciona e o SMTP entrega mensagens reais.
+- Importação, preenchimento, download privado e solicitações funcionam.
+- Banco e mídia possuem armazenamento persistente e recuperação testada.
 
-```bash
-docker compose -f docker-compose.prod.yml exec web python manage.py collectstatic --noinput
-```
-
-## 5) Recomendacoes obrigatorias antes do go-live
-
-- Ativar HTTPS no proxy reverso da infraestrutura.
-- Configurar backup automatico do PostgreSQL.
-- Monitorar disponibilidade do endpoint `/healthz/`.
-- Garantir acesso administrativo com senha forte e email verificado.
+Não reverta migrações após uso sem analisar os registros que seriam removidos.

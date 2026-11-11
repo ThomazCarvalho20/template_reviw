@@ -1,4 +1,5 @@
 import csv
+import json
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -6,15 +7,18 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.files.base import ContentFile
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import transaction
 from django.db.models import Q
 from django.http import Http404, HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView
 
 from apps.templates_engine.audit import log_template_action
+from apps.templates_engine.domain.institution import can_manage_template, visible_submissions
 from apps.templates_engine.forms import (
     DynamicTemplateFillForm,
     TemplateInviteForm,
@@ -25,6 +29,8 @@ from apps.templates_engine.forms import (
 from apps.templates_engine.models import (
     AccessRole,
     AuditAction,
+    DocumentRequest,
+    DocumentRequestEvent,
     DocumentTemplate,
     InviteStatus,
     TemplateFileType,
@@ -36,7 +42,8 @@ from apps.templates_engine.models import (
     Workspace,
     WorkspaceMemberRole,
 )
-from apps.templates_engine.services import detect_template_schema, generate_filled_document
+from apps.templates_engine.services import generate_filled_document
+
 from .shared import (
     get_user_items_per_page,
     template_access_service,
@@ -85,9 +92,13 @@ class TemplateListView(LoginRequiredMixin, ListView):
             permissions = template_selector.template_permissions_for_owned_templates(owned_ids)
             invites = template_selector.pending_invites_for_owned_templates(owned_ids)
             for permission in permissions:
-                context["permissions_by_template"].setdefault(permission.template_id, []).append(permission)
+                context["permissions_by_template"].setdefault(permission.template_id, []).append(
+                    permission
+                )
             for invite in invites:
-                context["pending_invites_by_template"].setdefault(invite.template_id, []).append(invite)
+                context["pending_invites_by_template"].setdefault(invite.template_id, []).append(
+                    invite
+                )
 
         context["editable_roles"] = [
             (AccessRole.EDITOR, "Editor"),
@@ -99,7 +110,9 @@ class TemplateListView(LoginRequiredMixin, ListView):
         context["current_file_type"] = (self.request.GET.get("file_type") or "").strip()
         context["status_options"] = TemplateStatus.choices
         context["file_type_options"] = TemplateFileType.choices
-        context["share_groups"] = template_selector.owner_groups_with_members_ordered(self.request.user)
+        context["share_groups"] = template_selector.owner_groups_with_members_ordered(
+            self.request.user
+        )
         return context
 
 
@@ -108,6 +121,12 @@ class TemplateCreateView(LoginRequiredMixin, CreateView):
     form_class = TemplateUploadForm
     success_url = reverse_lazy("template-list")
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["actor"] = self.request.user
+        return kwargs
+
+    @transaction.atomic
     def form_valid(self, form):
         workspace = None
         workspace_id = self.request.POST.get("workspace_id") or self.request.GET.get("workspace")
@@ -120,7 +139,7 @@ class TemplateCreateView(LoginRequiredMixin, CreateView):
         form.instance.owner = self.request.user
         form.instance.workspace = workspace
         response = super().form_valid(form)
-        schema = detect_template_schema(self.object.file.path, self.object.file_type)
+        schema = form.detected_schema
         self.object.fields_schema = schema
         self.object.save(update_fields=["fields_schema", "updated_at"])
         TemplatePermission.objects.get_or_create(
@@ -158,7 +177,9 @@ class TemplateFillView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["form"] = DynamicTemplateFillForm(fields_schema=self.object.fields_schema)
-        context["recent_submissions"] = self.object.submissions.select_related("submitted_by")[:10]
+        context["recent_submissions"] = visible_submissions(
+            self.request.user, self.object.submissions.all()
+        ).select_related("submitted_by")[:10]
         role = template_access_service.resolve_user_role(self.object, self.request.user)
         context["can_submit"] = self.object.status == TemplateStatus.ACTIVE and role in {
             AccessRole.OWNER,
@@ -169,13 +190,22 @@ class TemplateFillView(LoginRequiredMixin, DetailView):
         context["current_role"] = role
         return context
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         role = template_access_service.resolve_user_role(self.object, request.user)
+        if self.object.institution_id and not self.object.institution.is_active:
+            messages.error(request, "Esta instituição está inativa.")
+            return redirect("template-list")
         if self.object.status != TemplateStatus.ACTIVE:
             messages.error(request, "Template encerrado. Nao e possivel enviar preenchimento.")
             return redirect("template-fill", pk=self.object.pk)
-        if role not in {AccessRole.OWNER, AccessRole.EDITOR, AccessRole.FILLER, WorkspaceMemberRole.MEMBER}:
+        if role not in {
+            AccessRole.OWNER,
+            AccessRole.EDITOR,
+            AccessRole.FILLER,
+            WorkspaceMemberRole.MEMBER,
+        }:
             messages.error(request, "Seu perfil possui acesso somente leitura para este template.")
             return redirect("template-fill", pk=self.object.pk)
 
@@ -185,13 +215,26 @@ class TemplateFillView(LoginRequiredMixin, DetailView):
             context["form"] = form
             return self.render_to_response(context)
 
+        try:
+            rendered = generate_filled_document(
+                self.object.file.path, self.object.file_type, form.cleaned_data
+            )
+        except (ValueError, OSError):
+            form.add_error(
+                None, "Não foi possível gerar o documento. Verifique o modelo e seus campos."
+            )
+            context = self.get_context_data()
+            context["form"] = form
+            return self.render_to_response(context)
+
         submission = TemplateSubmission.objects.create(
             template=self.object,
             submitted_by=request.user,
-            payload=form.cleaned_data,
+            payload=json.loads(json.dumps(form.cleaned_data, cls=DjangoJSONEncoder)),
         )
-        rendered = generate_filled_document(self.object.file.path, self.object.file_type, form.cleaned_data)
-        output_name = f"template_{self.object.pk}_submission_{submission.pk}.{self.object.file_type}"
+        output_name = (
+            f"template_{self.object.pk}_submission_{submission.pk}.{self.object.file_type}"
+        )
         submission.output_file.save(output_name, ContentFile(rendered), save=True)
 
         log_template_action(
@@ -200,6 +243,20 @@ class TemplateFillView(LoginRequiredMixin, DetailView):
             actor=request.user,
             metadata={"submission_id": submission.pk, "fields_count": len(form.cleaned_data)},
         )
+        if self.object.institution_id:
+            document_request = DocumentRequest.objects.create(
+                submission=submission,
+                institution=self.object.institution,
+                requester=request.user,
+            )
+            DocumentRequestEvent.objects.create(
+                request=document_request,
+                actor=request.user,
+                status="pending",
+                note="Solicitação criada a partir do preenchimento.",
+            )
+            messages.success(request, "Solicitação registrada. Acompanhe o protocolo abaixo.")
+            return redirect("request-detail", pk=document_request.pk)
         messages.success(request, "Preenchimento salvo com sucesso.")
         return redirect("template-fill", pk=self.object.pk)
 
@@ -207,14 +264,16 @@ class TemplateFillView(LoginRequiredMixin, DetailView):
 class TemplateCloseView(LoginRequiredMixin, View):
     def post(self, request, pk):
         template_obj = get_object_or_404(DocumentTemplate, pk=pk)
-        if template_obj.owner_id != request.user.id:
+        if not can_manage_template(template_obj, request.user):
             messages.error(request, "Somente o dono pode encerrar o template.")
             return redirect("template-list")
 
         template_obj.status = TemplateStatus.CLOSED
         template_obj.closed_at = timezone.now()
         template_obj.save(update_fields=["status", "closed_at", "updated_at"])
-        log_template_action(template=template_obj, action=AuditAction.TEMPLATE_CLOSED, actor=request.user)
+        log_template_action(
+            template=template_obj, action=AuditAction.TEMPLATE_CLOSED, actor=request.user
+        )
         messages.success(request, "Template encerrado.")
         return redirect("template-list")
 
@@ -222,7 +281,7 @@ class TemplateCloseView(LoginRequiredMixin, View):
 class TemplateShareView(LoginRequiredMixin, View):
     def post(self, request, pk):
         template_obj = get_object_or_404(DocumentTemplate, pk=pk)
-        if template_obj.owner_id != request.user.id:
+        if not can_manage_template(template_obj, request.user):
             messages.error(request, "Somente o dono pode compartilhar o template.")
             return redirect("template-list")
 
@@ -261,7 +320,7 @@ class TemplateShareView(LoginRequiredMixin, View):
 class TemplateInviteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         template_obj = get_object_or_404(DocumentTemplate, pk=pk)
-        if template_obj.owner_id != request.user.id:
+        if not can_manage_template(template_obj, request.user):
             messages.error(request, "Somente o dono pode convidar usuarios.")
             return redirect("template-list")
 
@@ -282,7 +341,9 @@ class TemplateInviteView(LoginRequiredMixin, View):
             defaults={"role": role, "created_by": request.user},
         )
 
-        accept_url = request.build_absolute_uri(reverse("template-invite-accept", kwargs={"token": invite.token}))
+        accept_url = request.build_absolute_uri(
+            reverse("template-invite-accept", kwargs={"token": invite.token})
+        )
         send_mail(
             subject=f"Convite para template: {template_obj.name}",
             message=(
@@ -307,7 +368,7 @@ class TemplateInviteView(LoginRequiredMixin, View):
 class TemplateShareWithGroupView(LoginRequiredMixin, View):
     def post(self, request, pk):
         template_obj = get_object_or_404(DocumentTemplate, pk=pk)
-        if template_obj.owner_id != request.user.id:
+        if not can_manage_template(template_obj, request.user):
             messages.error(request, "Somente o dono pode compartilhar o template.")
             return redirect("template-list")
 
@@ -318,9 +379,13 @@ class TemplateShareWithGroupView(LoginRequiredMixin, View):
                     messages.error(request, error)
             return redirect("template-list")
 
-        group = get_object_or_404(TemplateShareGroup, pk=form.cleaned_data["group_id"], owner=request.user)
+        group = get_object_or_404(
+            TemplateShareGroup, pk=form.cleaned_data["group_id"], owner=request.user
+        )
         role = form.cleaned_data["role"]
-        granted, invited = template_sharing_service.share_template_with_group(request, template_obj, group, role)
+        granted, invited = template_sharing_service.share_template_with_group(
+            request, template_obj, group, role
+        )
 
         messages.success(
             request,
@@ -331,6 +396,11 @@ class TemplateShareWithGroupView(LoginRequiredMixin, View):
 
 class TemplateInviteAcceptView(LoginRequiredMixin, View):
     def get(self, request, token):
+        invite = get_object_or_404(TemplateInvite, token=token)
+        return render(request, "templates_engine/invite_confirm.html", {"invite": invite})
+
+    @transaction.atomic
+    def post(self, request, token):
         invite = get_object_or_404(TemplateInvite, token=token)
         if invite.status != InviteStatus.PENDING:
             messages.info(request, "Este convite nao esta mais pendente.")
@@ -363,7 +433,7 @@ class TemplateInviteAcceptView(LoginRequiredMixin, View):
 class TemplatePermissionRevokeView(LoginRequiredMixin, View):
     def post(self, request, pk, permission_id):
         template_obj = get_object_or_404(DocumentTemplate, pk=pk)
-        if template_obj.owner_id != request.user.id:
+        if not can_manage_template(template_obj, request.user):
             messages.error(request, "Somente o dono pode revogar permissao.")
             return redirect("template-list")
 
@@ -388,7 +458,7 @@ class TemplatePermissionRevokeView(LoginRequiredMixin, View):
 class TemplatePermissionUpdateView(LoginRequiredMixin, View):
     def post(self, request, pk, permission_id):
         template_obj = get_object_or_404(DocumentTemplate, pk=pk)
-        if template_obj.owner_id != request.user.id:
+        if not can_manage_template(template_obj, request.user):
             messages.error(request, "Somente o dono pode editar permissao.")
             return redirect("template-list")
 
@@ -414,7 +484,11 @@ class TemplatePermissionUpdateView(LoginRequiredMixin, View):
             template=template_obj,
             action=AuditAction.TEMPLATE_PERMISSION_UPDATED,
             actor=request.user,
-            metadata={"target_email": permission.user.email, "old_role": old_role, "new_role": new_role},
+            metadata={
+                "target_email": permission.user.email,
+                "old_role": old_role,
+                "new_role": new_role,
+            },
         )
         messages.success(request, f"Permissao atualizada para {permission.user.email}.")
         return redirect("template-list")
@@ -423,7 +497,7 @@ class TemplatePermissionUpdateView(LoginRequiredMixin, View):
 class TemplateInviteCancelView(LoginRequiredMixin, View):
     def post(self, request, pk, invite_id):
         template_obj = get_object_or_404(DocumentTemplate, pk=pk)
-        if template_obj.owner_id != request.user.id:
+        if not can_manage_template(template_obj, request.user):
             messages.error(request, "Somente o dono pode cancelar convites.")
             return redirect("template-list")
 
@@ -480,16 +554,20 @@ class TemplateAuditExportCsvView(LoginRequiredMixin, View):
 
         logs = template_filter_service.get_filtered_audit_logs(request, template_obj)
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f'attachment; filename="template_{template_obj.pk}_audit.csv"'
+        response["Content-Disposition"] = (
+            f'attachment; filename="template_{template_obj.pk}_audit.csv"'
+        )
         writer = csv.writer(response)
         writer.writerow(["timestamp", "action", "actor_email", "metadata"])
         for log in logs:
-            writer.writerow([
-                log.created_at.isoformat(),
-                log.action,
-                log.actor.email if log.actor else "",
-                log.metadata,
-            ])
+            writer.writerow(
+                [
+                    log.created_at.isoformat(),
+                    log.action,
+                    log.actor.email if log.actor else "",
+                    log.metadata,
+                ]
+            )
         return response
 
 
@@ -499,19 +577,31 @@ class TemplateSubmissionExportCsvView(LoginRequiredMixin, View):
         if not template_access_service.user_can_access_template(template_obj, request.user):
             raise Http404("Template nao encontrado.")
 
-        submissions = template_filter_service.get_filtered_submissions(request, template_obj)
+        submissions = visible_submissions(
+            request.user, template_filter_service.get_filtered_submissions(request, template_obj)
+        )
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f'attachment; filename="template_{template_obj.pk}_submissions.csv"'
+        response["Content-Disposition"] = (
+            f'attachment; filename="template_{template_obj.pk}_submissions.csv"'
+        )
         writer = csv.writer(response)
         writer.writerow(["id", "timestamp", "submitted_by_email", "output_file", "fields_count"])
         for submission in submissions:
-            writer.writerow([
-                submission.pk,
-                submission.created_at.isoformat(),
-                submission.submitted_by.email if submission.submitted_by else "",
-                submission.output_file.url if submission.output_file else "",
-                len(submission.payload or {}),
-            ])
+            writer.writerow(
+                [
+                    submission.pk,
+                    submission.created_at.isoformat(),
+                    submission.submitted_by.email if submission.submitted_by else "",
+                    (
+                        request.build_absolute_uri(
+                            reverse("submission-download", args=[submission.pk])
+                        )
+                        if submission.output_file
+                        else ""
+                    ),
+                    len(submission.payload or {}),
+                ]
+            )
         return response
 
 
@@ -536,15 +626,25 @@ class TemplateDetailView(LoginRequiredMixin, DetailView):
             AccessRole.FILLER,
             WorkspaceMemberRole.MEMBER,
         }
-        filtered_submissions = template_filter_service.get_filtered_submissions(self.request, self.object)
-        submissions_paginator = Paginator(filtered_submissions, get_user_items_per_page(self.request.user, 10))
-        submissions_page_obj = submissions_paginator.get_page(self.request.GET.get("page_submissions"))
+        filtered_submissions = visible_submissions(
+            self.request.user,
+            template_filter_service.get_filtered_submissions(self.request, self.object),
+        )
+        submissions_paginator = Paginator(
+            filtered_submissions, get_user_items_per_page(self.request.user, 10)
+        )
+        submissions_page_obj = submissions_paginator.get_page(
+            self.request.GET.get("page_submissions")
+        )
         context["recent_submissions"] = submissions_page_obj.object_list
         context["submissions_page_obj"] = submissions_page_obj
         context["submissions_is_paginated"] = submissions_page_obj.has_other_pages()
         context["recent_audit_logs"] = self.object.audit_logs.select_related("actor")[:20]
-        context["is_owner"] = self.object.owner_id == self.request.user.id
-        context["current_submitted_by_email"] = (self.request.GET.get("submitted_by_email") or "").strip()
+        context["can_manage_fields"] = can_manage_template(self.object, self.request.user)
+        context["is_owner"] = bool(can_manage_template(self.object, self.request.user))
+        context["current_submitted_by_email"] = (
+            self.request.GET.get("submitted_by_email") or ""
+        ).strip()
         context["current_submitted_from"] = (self.request.GET.get("submitted_from") or "").strip()
         context["current_submitted_to"] = (self.request.GET.get("submitted_to") or "").strip()
         context["current_has_output"] = (self.request.GET.get("has_output") or "").strip()
@@ -556,7 +656,9 @@ class TemplateDetailView(LoginRequiredMixin, DetailView):
         )
         if context["is_owner"]:
             context["permissions"] = (
-                TemplatePermission.objects.select_related("user").filter(template=self.object).exclude(role=AccessRole.OWNER)
+                TemplatePermission.objects.select_related("user")
+                .filter(template=self.object)
+                .exclude(role=AccessRole.OWNER)
             )
             context["pending_invites"] = self.object.invites.filter(status=InviteStatus.PENDING)
             context["editable_roles"] = [

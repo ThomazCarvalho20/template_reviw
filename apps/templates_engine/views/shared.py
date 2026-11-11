@@ -7,7 +7,6 @@ from apps.templates_engine.domain import (
     WorkspaceService,
 )
 
-
 template_access_service = TemplateAccessService()
 template_selector = TemplateEngineSelector()
 workspace_service = WorkspaceService(template_access_service)

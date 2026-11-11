@@ -6,6 +6,7 @@ from django.views.generic import TemplateView
 
 from apps.templates_engine.forms import TemplateShareGroupCreateForm, TemplateShareGroupUpdateForm
 from apps.templates_engine.models import TemplateShareGroup, TemplateShareGroupMember, Workspace
+
 from .shared import template_selector, template_sharing_service
 
 
@@ -33,9 +34,9 @@ class GroupDetailView(LoginRequiredMixin, TemplateView):
         group = self._get_group()
         members_raw = ", ".join(group.members.values_list("email", flat=True))
         context["group"] = group
-        context["group_update_form"] = kwargs.get("group_update_form") or TemplateShareGroupUpdateForm(
-            initial={"name": group.name, "members_raw": members_raw}
-        )
+        context["group_update_form"] = kwargs.get(
+            "group_update_form"
+        ) or TemplateShareGroupUpdateForm(initial={"name": group.name, "members_raw": members_raw})
         context["workspaces"] = template_selector.owner_workspaces_ordered(self.request.user)
         return context
 
@@ -72,16 +73,24 @@ class GroupDetailView(LoginRequiredMixin, TemplateView):
             workspace_id = request.POST.get("workspace_id")
             workspace = get_object_or_404(Workspace, pk=workspace_id, owner=request.user)
             if action == "add_group_to_workspace":
-                added, missing = template_sharing_service.add_group_members_to_workspace(group, workspace)
+                added, missing = template_sharing_service.add_group_members_to_workspace(
+                    group, workspace
+                )
                 if added:
-                    messages.success(request, f"{added} membro(s) adicionados ao ambiente '{workspace.name}'.")
+                    messages.success(
+                        request, f"{added} membro(s) adicionados ao ambiente '{workspace.name}'."
+                    )
                 if missing:
                     messages.warning(request, f"Sem cadastro no sistema: {', '.join(missing)}")
                 return redirect("group-detail", group_id=group.pk)
 
-            removed, skipped = template_sharing_service.remove_group_members_from_workspace(group, workspace)
+            removed, skipped = template_sharing_service.remove_group_members_from_workspace(
+                group, workspace
+            )
             if removed:
-                messages.success(request, f"{removed} membro(s) removidos do ambiente '{workspace.name}'.")
+                messages.success(
+                    request, f"{removed} membro(s) removidos do ambiente '{workspace.name}'."
+                )
             if skipped:
                 messages.info(request, "Criador do ambiente foi preservado automaticamente.")
             return redirect("group-detail", group_id=group.pk)
@@ -99,5 +108,7 @@ class TemplateShareGroupCreateView(LoginRequiredMixin, View):
                     messages.error(request, error)
             return redirect("group-list")
         group = form.save(owner=request.user)
-        messages.success(request, f"Grupo '{group.name}' criado com {group.members.count()} membro(s).")
+        messages.success(
+            request, f"Grupo '{group.name}' criado com {group.members.count()} membro(s)."
+        )
         return redirect("group-list")

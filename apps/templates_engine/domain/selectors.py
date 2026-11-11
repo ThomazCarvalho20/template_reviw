@@ -17,7 +17,9 @@ from apps.templates_engine.models import (
 class TemplateEngineSelector:
     @staticmethod
     def workspace_memberships_for_user(user):
-        return WorkspaceMembership.objects.select_related("workspace").filter(user=user, is_active=True)
+        return WorkspaceMembership.objects.select_related("workspace").filter(
+            user=user, is_active=True
+        )
 
     @staticmethod
     def owned_workspaces(user):
@@ -43,7 +45,11 @@ class TemplateEngineSelector:
 
     @staticmethod
     def owner_groups_with_members_ordered(user):
-        return TemplateShareGroup.objects.filter(owner=user).prefetch_related("members").order_by("name")
+        return (
+            TemplateShareGroup.objects.filter(owner=user)
+            .prefetch_related("members")
+            .order_by("name")
+        )
 
     @staticmethod
     def owner_workspaces_ordered(user):
@@ -71,12 +77,23 @@ class TemplateEngineSelector:
 
     @staticmethod
     def pending_invites_for_owned_templates(owned_template_ids):
-        return TemplateInvite.objects.filter(template_id__in=owned_template_ids, status=InviteStatus.PENDING)
+        return TemplateInvite.objects.filter(
+            template_id__in=owned_template_ids, status=InviteStatus.PENDING
+        )
 
     @staticmethod
     def accessible_templates(user, base_queryset):
+        if user.is_superuser:
+            return base_queryset
         return base_queryset.filter(
-            Q(owner=user)
-            | Q(permissions__user=user)
-            | Q(workspace__memberships__user=user, workspace__memberships__is_active=True)
+            (
+                Q(owner=user, institution__isnull=True)
+                | Q(
+                    permissions__user=user,
+                    permissions__role__in=[AccessRole.EDITOR, AccessRole.FILLER, AccessRole.VIEWER],
+                )
+                | Q(workspace__memberships__user=user, workspace__memberships__is_active=True)
+                | Q(institution__memberships__user=user, institution__memberships__is_active=True)
+            )
+            & (Q(institution__isnull=True) | Q(institution__is_active=True))
         ).distinct()

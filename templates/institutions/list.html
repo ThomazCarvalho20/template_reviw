@@ -1,0 +1,11 @@
+{% extends "layout/base.html" %}
+{% block title %}Instituições | EducaDoc Social{% endblock %}
+{% block header %}Instituições{% endblock %}
+{% block content %}
+<section class="card stack min-w-0">
+  <div class="page-head"><h3>Minhas instituições</h3>{% if request.user.is_superuser %}<a class="button" href="{% url 'institution-create' %}">Cadastrar instituição</a>{% endif %}</div>
+  <p class="muted">O administrador cadastra as instituições e seus responsáveis. Solicite seu vínculo ao responsável da instituição.</p>
+  {% for institution in institutions %}<article class="card card-subtle"><h4>{{ institution.name }}</h4><p>{{ institution.description }}</p><p>{% if institution.is_active %}Ativa{% else %}Inativa{% endif %}</p><a class="button button-outline" href="{% url 'institution-detail' institution.pk %}">Abrir instituição</a></article>{% empty %}<p>Nenhum vínculo institucional ativo.</p>{% endfor %}
+  {% include "partials/pagination.html" %}
+</section>
+{% endblock %}

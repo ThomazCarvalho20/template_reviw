@@ -2,9 +2,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import render_to_string
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 
 from apps.templates_engine.models import UserNotification
+
 from .shared import template_selector
 
 
@@ -13,13 +15,23 @@ class NotificationMarkReadView(LoginRequiredMixin, View):
         notification = get_object_or_404(UserNotification, pk=notification_id, user=request.user)
         notification.is_read = True
         notification.save(update_fields=["is_read"])
-        return redirect(request.POST.get("next") or "dashboard")
+        destination = request.POST.get("next", "")
+        if not url_has_allowed_host_and_scheme(
+            destination, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+        ):
+            destination = "dashboard"
+        return redirect(destination or "dashboard")
 
 
 class NotificationMarkAllReadView(LoginRequiredMixin, View):
     def post(self, request):
         template_selector.mark_all_notifications_read(request.user)
-        return redirect(request.POST.get("next") or "dashboard")
+        destination = request.POST.get("next", "")
+        if not url_has_allowed_host_and_scheme(
+            destination, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+        ):
+            destination = "dashboard"
+        return redirect(destination or "dashboard")
 
 
 class NotificationFeedView(LoginRequiredMixin, View):

@@ -1,6 +1,6 @@
 {% extends "layout/base.html" %}
 
-{% block title %}Preencher Template | Template Review{% endblock %}
+{% block title %}Preencher Template | EducaDoc Social{% endblock %}
 {% block header %}Preencher: {{ template_obj.name }}{% endblock %}
 
 {% block content %}
@@ -17,9 +17,10 @@
 
     <form method="post" class="form-grid" style="margin-top:0.8rem;">
       {% csrf_token %}
+      {{ form.non_field_errors }}
       {% for field in form %}
         <div>
-          <label>{{ field.label }}</label>
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
           {{ field }}
           {% if field.errors %}
             <p style="color:#be123c; font-size:0.8rem; margin:0.4rem 0 0;">{{ field.errors|join:", " }}</p>
@@ -52,7 +53,7 @@
         <li style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
           <span>#{{ submission.id }} - {{ submission.created_at|date:"d/m/Y H:i" }}</span>
           {% if submission.output_file %}
-            <a class="button button-outline" href="{{ submission.output_file.url }}">Download</a>
+            <a class="button button-outline" href="{% url 'submission-download' submission.pk %}">Download</a>
           {% else %}
             <span class="muted">sem arquivo</span>
           {% endif %}
