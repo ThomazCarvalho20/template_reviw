@@ -7,7 +7,9 @@ from apps.templates_engine.models import TemplateShareGroup, TemplateShareGroupM
 class TemplateShareGroupCreateForm(forms.ModelForm):
     members_raw = forms.CharField(
         label="E-mails do grupo",
-        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "email1@dominio.com, email2@dominio.com"}),
+        widget=forms.Textarea(
+            attrs={"rows": 3, "placeholder": "email1@dominio.com, email2@dominio.com"}
+        ),
         help_text="Separe por virgula, ponto e virgula ou quebra de linha.",
     )
 
@@ -26,7 +28,10 @@ class TemplateShareGroupCreateForm(forms.ModelForm):
 
     def save(self, owner):
         group = TemplateShareGroup.objects.create(owner=owner, name=self.cleaned_data["name"])
-        members = [TemplateShareGroupMember(group=group, email=email) for email in self.cleaned_data["members_raw"]]
+        members = [
+            TemplateShareGroupMember(group=group, email=email)
+            for email in self.cleaned_data["members_raw"]
+        ]
         TemplateShareGroupMember.objects.bulk_create(members)
         return group
 
@@ -35,7 +40,9 @@ class TemplateShareGroupUpdateForm(forms.Form):
     name = forms.CharField(max_length=120, label="Nome do grupo")
     members_raw = forms.CharField(
         label="E-mails do grupo",
-        widget=forms.Textarea(attrs={"rows": 5, "placeholder": "email1@dominio.com, email2@dominio.com"}),
+        widget=forms.Textarea(
+            attrs={"rows": 5, "placeholder": "email1@dominio.com, email2@dominio.com"}
+        ),
         help_text="Separe por virgula, ponto e virgula ou quebra de linha.",
     )
 

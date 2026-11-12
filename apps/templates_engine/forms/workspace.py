@@ -17,7 +17,9 @@ class WorkspaceCreateForm(forms.ModelForm):
 class WorkspaceAddMembersForm(forms.Form):
     members_raw = forms.CharField(
         label="Adicionar pessoas (e-mails)",
-        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "email1@dominio.com, email2@dominio.com"}),
+        widget=forms.Textarea(
+            attrs={"rows": 3, "placeholder": "email1@dominio.com, email2@dominio.com"}
+        ),
     )
 
     def clean_members_raw(self):

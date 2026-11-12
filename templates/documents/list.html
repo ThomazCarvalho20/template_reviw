@@ -1,0 +1,5 @@
+{% extends "layout/base.html" %}
+{% block title %}Documentos emitidos | EducaDoc Social{% endblock %}
+{% block header %}Documentos emitidos{% endblock %}
+{% block content %}<section class="card stack min-w-0"><h3>Meus documentos e compartilhamentos</h3><p>O compartilhamento de uma emissão permite baixar apenas aquele arquivo, sem conceder acesso ao modelo ou à solicitação.</p>
+{% for submission in submissions %}<article class="card card-subtle"><h4>{{ submission.template.name }}</h4><p>Emissão #{{ submission.pk }} · {{ submission.created_at|date:"d/m/Y H:i" }}</p><div class="inline-actions flex flex-wrap gap-2">{% if submission.output_file %}<a class="button" href="{% url 'submission-download' submission.pk %}">Baixar</a>{% endif %}{% if submission.pk in manageable_submission_ids %}<a class="button button-outline" href="{% url 'submission-share' submission.pk %}">Gerenciar compartilhamento</a>{% endif %}</div></article>{% empty %}<p>Nenhum documento disponível.</p>{% endfor %}{% include "partials/pagination.html" %}</section>{% endblock %}

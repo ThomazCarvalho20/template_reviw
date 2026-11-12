@@ -5,7 +5,9 @@ from .choices import NotificationType, WorkspaceJoinRequestStatus, WorkspaceMemb
 
 
 class Workspace(models.Model):
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_workspaces")
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_workspaces"
+    )
     name = models.CharField(max_length=120)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -20,8 +22,12 @@ class Workspace(models.Model):
 
 class WorkspaceMembership(models.Model):
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name="memberships")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="workspace_memberships")
-    role = models.CharField(max_length=16, choices=WorkspaceMemberRole.choices, default=WorkspaceMemberRole.MEMBER)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="workspace_memberships"
+    )
+    role = models.CharField(
+        max_length=16, choices=WorkspaceMemberRole.choices, default=WorkspaceMemberRole.MEMBER
+    )
     is_active = models.BooleanField(default=True)
     last_seen_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -65,7 +71,9 @@ class WorkspaceJoinRequest(models.Model):
 
 
 class UserNotification(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"
+    )
     notification_type = models.CharField(max_length=64, choices=NotificationType.choices)
     title = models.CharField(max_length=180)
     message = models.TextField(blank=True)

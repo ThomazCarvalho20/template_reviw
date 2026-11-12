@@ -1,5 +1,5 @@
-from django.utils.dateparse import parse_date
 from django.db.models import Q
+from django.utils.dateparse import parse_date
 
 from apps.templates_engine.models import AuditAction, TemplateAuditLog, TemplateSubmission
 
@@ -31,7 +31,9 @@ class TemplateFilterService:
 
     @staticmethod
     def get_filtered_submissions(request, template_obj):
-        submissions = TemplateSubmission.objects.select_related("submitted_by").filter(template=template_obj)
+        submissions = TemplateSubmission.objects.select_related("submitted_by").filter(
+            template=template_obj
+        )
         submitted_by_email = (request.GET.get("submitted_by_email") or "").strip()
         submitted_from = (request.GET.get("submitted_from") or "").strip()
         submitted_to = (request.GET.get("submitted_to") or "").strip()

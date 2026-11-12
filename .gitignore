@@ -1,66 +1,80 @@
-# Python
+# Repositório de execução: somente os caminhos liberados abaixo são enviados.
+# Os demais arquivos continuam disponíveis localmente.
+/*
+!/.gitignore
+!/.dockerignore
+!/README.md
+!/manage.py
+!/requirements.txt
+!/Dockerfile
+!/docker-compose.prod.yml
+!/apps/
+!/config/
+!/deploy/
+!/scripts/
+!/static/
+!/templates/
+!/docs/
+
+# Somente o entrypoint e o guia de implantação são necessários nesses diretórios.
+/scripts/*
+!/scripts/entrypoint.sh
+/docs/*
+!/docs/DEPLOYMENT.md
+
+# Testes e ferramentas de desenvolvimento ficam somente no ambiente local.
+tests/
+tests.py
+tests_*.py
+test_*.py
+*_test.py
+/static/css/tailwind.input.css
+
+# Artefatos Python, dependências instaladas e caches.
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
 *.egg
 *.egg-info/
-.eggs/
-build/
-dist/
-
-# Ambientes virtuais
 .venv/
 venv/
 env/
 ENV/
-
-# Testes, cobertura e análise
+node_modules/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-.tox/
-.nox/
-.coverage
-.coverage.*
-htmlcov/
-coverage.xml
+.cache/
+build/
+dist/
 
-# Django
-db.sqlite3
-db.sqlite3-journal
-media/
-staticfiles/
+# Bancos, uploads, estáticos coletados e backups são dados locais.
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.dump
+*.backup
+*.bak
+/media/
+/staticfiles/
+/.local-backups/
 
-# Variáveis de ambiente e segredos locais
+# Apenas exemplos sem credenciais reais são versionados.
 .env
 .env.*
-!.env.example
-!.env.docker.example
+!/.env.example
+!/.env.production.example
+*.pem
+*.key
+*.p12
+*.pfx
 
-# Logs e arquivos temporários
+# Logs, arquivos temporários e metadados locais.
 *.log
-logs/
-tmp/
-temp/
 *.tmp
 *.swp
 *.swo
 *~
-
-# IDEs e editores
-.idea/
-.vscode/
-*.code-workspace
-
-# Sistema operacional
 .DS_Store
-.AppleDouble
-.LSOverride
 Thumbs.db
-Desktop.ini
-
-# Ferramentas locais
-.ipynb_checkpoints/
-.cache/
-.codex

@@ -32,6 +32,7 @@ class WorkspaceJoinRequestStatus(models.TextChoices):
 
 
 class NotificationType(models.TextChoices):
+    DOCUMENT_REQUEST = "document_request", "Solicitação de documento"
     WORKSPACE_JOIN_REQUEST = "workspace_join_request", "Solicitacao de entrada em ambiente"
 
 
@@ -42,6 +43,10 @@ class InviteStatus(models.TextChoices):
 
 
 class AuditAction(models.TextChoices):
+    TEMPLATE_UPDATED = "template_updated", "Modelo atualizado"
+    TEMPLATE_FIELDS_UPDATED = "template_fields_updated", "Campos do modelo atualizados"
+    SUBMISSION_SHARED = "submission_shared", "Documento emitido compartilhado"
+    SUBMISSION_SHARE_REVOKED = "submission_share_revoked", "Compartilhamento de documento revogado"
     TEMPLATE_CREATED = "template_created", "Template criado"
     TEMPLATE_SHARED = "template_shared", "Template compartilhado"
     TEMPLATE_INVITED = "template_invited", "Convite enviado"

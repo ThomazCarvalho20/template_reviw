@@ -23,7 +23,13 @@ from apps.templates_engine.models import (
     WorkspaceMemberRole,
     WorkspaceMembership,
 )
-from .shared import template_access_service, template_selector, template_sharing_service, workspace_service
+
+from .shared import (
+    template_access_service,
+    template_selector,
+    template_sharing_service,
+    workspace_service,
+)
 
 
 class WorkspaceListView(LoginRequiredMixin, TemplateView):
@@ -34,8 +40,12 @@ class WorkspaceListView(LoginRequiredMixin, TemplateView):
         context["memberships"] = template_selector.workspace_memberships_for_user(self.request.user)
         context["owned_workspaces"] = template_selector.owned_workspaces(self.request.user)
         context["workspace_form"] = kwargs.get("workspace_form") or WorkspaceCreateForm()
-        context["pending_requests_for_owner"] = template_selector.pending_workspace_requests_for_owner(self.request.user)
-        context["my_pending_requests"] = template_selector.my_pending_workspace_requests(self.request.user)
+        context["pending_requests_for_owner"] = (
+            template_selector.pending_workspace_requests_for_owner(self.request.user)
+        )
+        context["my_pending_requests"] = template_selector.my_pending_workspace_requests(
+            self.request.user
+        )
         return context
 
 
@@ -83,7 +93,9 @@ class WorkspaceDetailView(LoginRequiredMixin, TemplateView):
                     message=f"{request.user.email} solicitou acesso ao ambiente '{self.workspace.name}'.",
                     metadata={"workspace_id": self.workspace.pk, "request_id": join_request.pk},
                 )
-            messages.warning(request, "Solicitacao enviada ao criador do ambiente. Aguarde aprovacao.")
+            messages.warning(
+                request, "Solicitacao enviada ao criador do ambiente. Aguarde aprovacao."
+            )
             return redirect("workspace-list")
 
         workspace_service.touch_presence(self.workspace, request.user)
@@ -91,17 +103,23 @@ class WorkspaceDetailView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        membership = template_access_service.get_workspace_membership(self.workspace, self.request.user)
+        membership = template_access_service.get_workspace_membership(
+            self.workspace, self.request.user
+        )
         context["workspace"] = self.workspace
         context["current_membership"] = membership
         context["can_manage"] = self.workspace.owner_id == self.request.user.id or (
             membership and membership.role in {WorkspaceMemberRole.OWNER, WorkspaceMemberRole.ADMIN}
         )
 
-        active_memberships = self.workspace.memberships.select_related("user").filter(is_active=True)
+        active_memberships = self.workspace.memberships.select_related("user").filter(
+            is_active=True
+        )
         online_threshold = timezone.now() - timezone.timedelta(minutes=2)
         context["memberships"] = active_memberships
-        context["online_memberships"] = active_memberships.filter(last_seen_at__gte=online_threshold)
+        context["online_memberships"] = active_memberships.filter(
+            last_seen_at__gte=online_threshold
+        )
         context["workspace_templates"] = self.workspace.templates.select_related("owner")
 
         accessible_templates = template_access_service.get_accessible_templates_queryset(
@@ -111,8 +129,12 @@ class WorkspaceDetailView(LoginRequiredMixin, TemplateView):
         context["available_templates"] = accessible_templates.exclude(workspace=self.workspace)
         context["add_members_form"] = WorkspaceAddMembersForm()
         context["add_group_form"] = WorkspaceAddGroupForm(owner=self.request.user)
-        context["share_groups_for_owner"] = template_selector.owner_groups_with_members(self.request.user)
-        context["attach_template_form"] = WorkspaceAttachTemplateForm(owner=self.request.user, workspace=self.workspace)
+        context["share_groups_for_owner"] = template_selector.owner_groups_with_members(
+            self.request.user
+        )
+        context["attach_template_form"] = WorkspaceAttachTemplateForm(
+            owner=self.request.user, workspace=self.workspace
+        )
         return context
 
 
@@ -234,7 +256,9 @@ class WorkspaceAddMembersView(LoginRequiredMixin, View):
                     messages.error(request, error)
             return redirect("workspace-detail", pk=workspace.pk)
 
-        added, missing = workspace_service.add_members_by_email(workspace, form.cleaned_data["members_raw"])
+        added, missing = workspace_service.add_members_by_email(
+            workspace, form.cleaned_data["members_raw"]
+        )
 
         if added:
             messages.success(request, f"{added} pessoa(s) adicionada(s) ao ambiente.")
@@ -257,11 +281,16 @@ class WorkspaceAddGroupView(LoginRequiredMixin, View):
                     messages.error(request, error)
             return redirect("workspace-detail", pk=workspace.pk)
 
-        group = get_object_or_404(template_selector.owner_groups_with_members(request.user), pk=form.cleaned_data["group_id"])
+        group = get_object_or_404(
+            template_selector.owner_groups_with_members(request.user),
+            pk=form.cleaned_data["group_id"],
+        )
         added, missing = template_sharing_service.add_group_members_to_workspace(group, workspace)
 
         if added:
-            messages.success(request, f"{added} membro(s) do grupo '{group.name}' adicionados ao ambiente.")
+            messages.success(
+                request, f"{added} membro(s) do grupo '{group.name}' adicionados ao ambiente."
+            )
         if missing:
             messages.warning(request, f"Sem cadastro no sistema: {', '.join(missing)}")
         return redirect("workspace-detail", pk=workspace.pk)

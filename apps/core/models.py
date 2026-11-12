@@ -9,7 +9,9 @@ class ProfilePhotoDisplayScope(models.TextChoices):
 
 
 class UserSettings(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="settings")
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="settings"
+    )
     profile_photo = models.FileField(upload_to="profile_photos/", blank=True, null=True)
     profile_photo_display_scope = models.CharField(
         max_length=16,

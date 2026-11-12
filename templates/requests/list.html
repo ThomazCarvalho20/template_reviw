@@ -1,0 +1,8 @@
+{% extends "layout/base.html" %}
+{% block title %}Solicitações | EducaDoc Social{% endblock %}
+{% block header %}Solicitações de documentos{% endblock %}
+{% block content %}
+<section class="card stack min-w-0"><h3>Acompanhamento e atendimento</h3><p>Preencha um modelo institucional para registrar uma solicitação. Você vê seus protocolos e, quando responsável, os da sua instituição.</p>
+<form method="get" class="form-grid"><label for="request-search">Modelo ou protocolo</label><input id="request-search" name="q" value="{{ request.GET.q }}"><label for="request-status">Situação</label><select id="request-status" name="status"><option value="">Todas</option><option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pendente</option><option value="in_review" {% if request.GET.status == 'in_review' %}selected{% endif %}>Em análise</option><option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>Aprovada</option><option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Indeferida</option><option value="canceled" {% if request.GET.status == 'canceled' %}selected{% endif %}>Cancelada</option></select><button type="submit">Pesquisar</button></form>
+{% for item in document_requests %}<article class="card card-subtle"><h4>{{ item.submission.template.name }}</h4><p class="protocol">Protocolo: {{ item.protocol }}</p><p>{{ item.institution }} · {{ item.get_status_display }} · {{ item.created_at|date:"d/m/Y H:i" }}</p><a class="button button-outline" href="{% url 'request-detail' item.pk %}">Acompanhar solicitação</a></article>{% empty %}<p>Nenhuma solicitação encontrada.</p>{% endfor %}{% include "partials/pagination.html" %}</section>
+{% endblock %}

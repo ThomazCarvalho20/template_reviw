@@ -1,6 +1,7 @@
 from django.conf import settings
 
 from apps.core.domain.selectors import CoreSelector
+from apps.templates_engine.domain.institution import user_profile
 
 
 class NavigationService:
@@ -19,6 +20,7 @@ class NavigationService:
         unread_count = CoreSelector.unread_notifications_count(request.user)
         return {
             "nav_user_settings": settings_obj,
+            "nav_profile": user_profile(request.user),
             "nav_notifications": notifications,
             "nav_notifications_unread_count": unread_count,
             "app_version": getattr(settings, "APP_VERSION", "1.0.0"),

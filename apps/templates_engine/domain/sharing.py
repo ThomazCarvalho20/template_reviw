@@ -44,7 +44,9 @@ class TemplateSharingService:
                 status=InviteStatus.PENDING,
                 defaults={"role": role, "created_by": request.user},
             )
-            accept_url = request.build_absolute_uri(reverse("template-invite-accept", kwargs={"token": invite.token}))
+            accept_url = request.build_absolute_uri(
+                reverse("template-invite-accept", kwargs={"token": invite.token})
+            )
             send_mail(
                 subject=f"Convite para template: {template_obj.name}",
                 message=(
@@ -102,7 +104,9 @@ class TemplateSharingService:
             if target_user.id == workspace.owner_id:
                 skipped += 1
                 continue
-            membership = WorkspaceMembership.objects.filter(workspace=workspace, user=target_user, is_active=True).first()
+            membership = WorkspaceMembership.objects.filter(
+                workspace=workspace, user=target_user, is_active=True
+            ).first()
             if not membership:
                 continue
             membership.is_active = False

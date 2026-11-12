@@ -1,7 +1,12 @@
 from django.contrib import admin
 
 from apps.templates_engine.models import (
+    DocumentRequest,
+    DocumentRequestEvent,
     DocumentTemplate,
+    Institution,
+    InstitutionMembership,
+    SubmissionShare,
     TemplateAuditLog,
     TemplateInvite,
     TemplatePermission,
@@ -86,3 +91,56 @@ class UserNotificationAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "notification_type", "title", "is_read", "created_at")
     list_filter = ("notification_type", "is_read")
     search_fields = ("user__email", "title")
+
+
+@admin.register(Institution)
+class InstitutionAdmin(admin.ModelAdmin):
+    list_display = ["name", "contact_email", "is_active"]
+    search_fields = ["name", "contact_email"]
+    list_filter = ["is_active"]
+
+
+@admin.register(InstitutionMembership)
+class InstitutionMembershipAdmin(admin.ModelAdmin):
+    list_display = ["institution", "user", "role", "is_active"]
+    list_filter = ["institution", "role", "is_active"]
+
+    def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    has_add_permission = has_view_permission
+    has_change_permission = has_view_permission
+    has_delete_permission = has_view_permission
+
+
+@admin.register(DocumentRequest)
+class DocumentRequestAdmin(admin.ModelAdmin):
+    list_display = ["protocol", "institution", "requester", "status", "assigned_to"]
+    list_filter = ["institution", "status"]
+    readonly_fields = [field.name for field in DocumentRequest._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(DocumentRequestEvent)
+class DocumentRequestEventAdmin(DocumentRequestAdmin):
+    list_display = ["request", "actor", "status", "created_at"]
+    list_filter = ["status"]
+    readonly_fields = [field.name for field in DocumentRequestEvent._meta.fields]
+
+
+@admin.register(SubmissionShare)
+class SubmissionShareAdmin(DocumentRequestAdmin):
+    list_display = ["submission", "user", "created_at"]
+    list_filter = []
+    readonly_fields = [field.name for field in SubmissionShare._meta.fields]

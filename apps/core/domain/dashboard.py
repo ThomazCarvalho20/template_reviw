@@ -1,4 +1,5 @@
 from apps.core.domain.selectors import CoreSelector
+from apps.templates_engine.domain.institution import visible_submissions
 
 
 class DashboardService:
@@ -16,5 +17,7 @@ class DashboardService:
     def get_recent_templates_and_submissions(user, limit):
         templates_qs = CoreSelector.accessible_templates(user)
         template_ids = templates_qs.values_list("id", flat=True)
-        submissions_qs = CoreSelector.template_submissions_for_template_ids(template_ids)
+        submissions_qs = visible_submissions(
+            user, CoreSelector.template_submissions_for_template_ids(template_ids)
+        )
         return templates_qs[:limit], submissions_qs[:limit]

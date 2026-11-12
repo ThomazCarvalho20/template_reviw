@@ -8,14 +8,30 @@ from .workspace import Workspace
 
 
 class DocumentTemplate(models.Model):
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="owned_templates")
-    workspace = models.ForeignKey(Workspace, on_delete=models.SET_NULL, blank=True, null=True, related_name="templates")
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="owned_templates"
+    )
+    workspace = models.ForeignKey(
+        Workspace, on_delete=models.SET_NULL, blank=True, null=True, related_name="templates"
+    )
+    institution = models.ForeignKey(
+        "templates_engine.Institution",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="templates",
+        verbose_name="Instituição",
+    )
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     file = models.FileField(upload_to="templates/")
     file_type = models.CharField(max_length=8, choices=TemplateFileType.choices)
-    fields_schema = models.JSONField(default=list, help_text="Lista de campos detectados no template.")
-    status = models.CharField(max_length=16, choices=TemplateStatus.choices, default=TemplateStatus.ACTIVE)
+    fields_schema = models.JSONField(
+        default=list, help_text="Lista de campos detectados no template."
+    )
+    status = models.CharField(
+        max_length=16, choices=TemplateStatus.choices, default=TemplateStatus.ACTIVE
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     closed_at = models.DateTimeField(blank=True, null=True)
@@ -28,8 +44,12 @@ class DocumentTemplate(models.Model):
 
 
 class TemplatePermission(models.Model):
-    template = models.ForeignKey(DocumentTemplate, on_delete=models.CASCADE, related_name="permissions")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="template_permissions")
+    template = models.ForeignKey(
+        DocumentTemplate, on_delete=models.CASCADE, related_name="permissions"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="template_permissions"
+    )
     role = models.CharField(max_length=16, choices=AccessRole.choices, default=AccessRole.FILLER)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -41,7 +61,9 @@ class TemplatePermission(models.Model):
 
 
 class TemplateShareGroup(models.Model):
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="template_share_groups")
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="template_share_groups"
+    )
     name = models.CharField(max_length=120)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -67,7 +89,9 @@ class TemplateShareGroupMember(models.Model):
 
 
 class TemplateSubmission(models.Model):
-    template = models.ForeignKey(DocumentTemplate, on_delete=models.CASCADE, related_name="submissions")
+    template = models.ForeignKey(
+        DocumentTemplate, on_delete=models.CASCADE, related_name="submissions"
+    )
     submitted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -91,7 +115,9 @@ class TemplateInvite(models.Model):
     invited_email = models.EmailField()
     role = models.CharField(max_length=16, choices=AccessRole.choices, default=AccessRole.FILLER)
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    status = models.CharField(max_length=16, choices=InviteStatus.choices, default=InviteStatus.PENDING)
+    status = models.CharField(
+        max_length=16, choices=InviteStatus.choices, default=InviteStatus.PENDING
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -117,7 +143,9 @@ class TemplateInvite(models.Model):
 
 
 class TemplateAuditLog(models.Model):
-    template = models.ForeignKey(DocumentTemplate, on_delete=models.CASCADE, related_name="audit_logs")
+    template = models.ForeignKey(
+        DocumentTemplate, on_delete=models.CASCADE, related_name="audit_logs"
+    )
     action = models.CharField(max_length=64, choices=AuditAction.choices)
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,

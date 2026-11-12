@@ -1,0 +1,14 @@
+{% extends "layout/base.html" %}
+{% block title %}{{ institution.name }} | EducaDoc Social{% endblock %}
+{% block header %}{{ institution.name }}{% endblock %}
+{% block content %}
+<div class="stack">
+<section class="card"><h3>{{ institution.name }}</h3><p>{{ institution.description }}</p><p>{{ institution.contact_email }}</p>
+<div class="inline-actions flex flex-wrap gap-2">{% if request.user.is_superuser %}<a class="button button-outline" href="{% url 'institution-update' institution.pk %}">Editar instituição</a>{% endif %}{% if can_manage %}<a class="button" href="{% url 'template-create' %}">Cadastrar modelo</a><a class="button button-outline" href="{% url 'request-list' %}">Atender solicitações</a>{% endif %}</div></section>
+<section class="card"><h3>Modelos institucionais</h3><ul>{% for template in templates %}<li><a href="{% url 'template-detail' template.pk %}">{{ template.name }} — {{ template.get_status_display }}</a></li>{% empty %}<li>Nenhum modelo disponível.</li>{% endfor %}</ul></section>
+{% if can_manage %}
+<section class="card"><h3>Vincular usuário cadastrado</h3><form method="post" action="{% url 'institution-member-add' institution.pk %}" class="form-grid">{% csrf_token %}{{ member_form.as_p }}<button type="submit">Salvar vínculo</button></form></section>
+<section class="card"><h3>Membros</h3><div class="table-wrap"><table class="table"><thead><tr><th scope="col">Usuário</th><th scope="col">Perfil</th><th scope="col">Situação</th><th scope="col">Ação</th></tr></thead><tbody>{% for member in members %}<tr><td>{{ member.user.email }}</td><td>{{ member.get_role_display }}</td><td>{% if member.is_active %}Ativo{% else %}Inativo{% endif %}</td><td>{% if member.is_active %}{% if request.user.is_superuser or member.role == 'member' %}<form method="post" action="{% url 'institution-member-remove' institution.pk member.pk %}">{% csrf_token %}<button class="button-danger" type="submit">Desativar vínculo de {{ member.user.email }}</button></form>{% endif %}{% endif %}</td></tr>{% endfor %}</tbody></table></div></section>
+{% endif %}
+</div>
+{% endblock %}

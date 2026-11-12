@@ -1,6 +1,6 @@
 {% extends "layout/base.html" %}
 
-{% block title %}Detalhes do Template | Template Review{% endblock %}
+{% block title %}Detalhes do Template | EducaDoc Social{% endblock %}
 {% block header %}Detalhes: {{ template_obj.name }}{% endblock %}
 
 {% block content %}
@@ -24,7 +24,8 @@
         </ul>
       </div>
       <div class="card" style="box-shadow:none;">
-        <h4>Acoes</h4>
+        <h4>Ações</h4>
+        {% if can_manage_fields %}<p><a class="button button-outline" href="{% url 'template-fields' template_obj.pk %}">Editar campos</a> <a class="button button-outline" href="{% url 'template-update' template_obj.pk %}">Editar modelo</a></p>{% endif %}
         <div class="stack">
           <a class="button" href="{% url 'template-fill' template_obj.pk %}">Abrir preenchimento</a>
           <a class="button button-outline" href="{% url 'template-audit' template_obj.pk %}">Auditoria completa</a>
@@ -65,7 +66,7 @@
       {% for submission in recent_submissions %}
         <li style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
           <span>#{{ submission.id }} - {{ submission.created_at|date:"d/m/Y H:i" }} ({{ submission.submitted_by.email|default:"sistema" }})</span>
-          {% if submission.output_file %}<a class="button button-outline" href="{{ submission.output_file.url }}">Download</a>{% endif %}
+          {% if submission.output_file %}<a class="button button-outline" href="{% url 'submission-download' submission.pk %}">Download</a>{% endif %}
         </li>
       {% empty %}
         <li class="muted">Sem submissoes.</li>

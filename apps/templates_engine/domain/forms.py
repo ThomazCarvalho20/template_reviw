@@ -16,7 +16,9 @@ class TemplateFormDomainService:
     def validate_existing_user_email(email):
         normalized = email.strip().lower()
         if not User.objects.filter(email__iexact=normalized).exists():
-            raise forms.ValidationError("Usuario nao encontrado. Ele precisa estar cadastrado e com email verificado.")
+            raise forms.ValidationError(
+                "Usuario nao encontrado. Ele precisa estar cadastrado e com email verificado."
+            )
         return normalized
 
     @staticmethod
@@ -50,7 +52,9 @@ class TemplateFormDomainService:
         max_items=100,
         max_items_message="No maximo 100 e-mails por operacao.",
     ):
-        tokens = [item.strip().lower() for item in raw.replace(";", ",").replace("\n", ",").split(",")]
+        tokens = [
+            item.strip().lower() for item in raw.replace(";", ",").replace("\n", ",").split(",")
+        ]
         emails = [item for item in tokens if item]
         if not emails:
             raise forms.ValidationError(empty_message)

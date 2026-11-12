@@ -1,0 +1,10 @@
+{% extends "layout/base.html" %}
+{% block title %}Solicitação | EducaDoc Social{% endblock %}
+{% block header %}Acompanhar solicitação{% endblock %}
+{% block content %}
+<div class="stack">
+<section class="card"><h3>{{ document_request.submission.template.name }}</h3><p class="protocol">Protocolo: {{ document_request.protocol }}</p><p>Instituição: {{ document_request.institution }}</p><p>Solicitante: {{ document_request.requester.email }}</p><p>Situação: <strong>{{ document_request.get_status_display }}</strong></p><p>Responsável: {{ document_request.assigned_to.email|default:"Aguardando atribuição" }}</p><div class="inline-actions flex flex-wrap gap-2"><a class="button" href="{% url 'submission-download' document_request.submission_id %}">Baixar documento</a><a class="button button-outline" href="{% url 'submission-share' document_request.submission_id %}">Compartilhar emissão</a></div></section>
+<section class="card"><h3>Histórico de atendimento</h3><ol>{% for event in events %}<li><strong>{{ event.get_status_display }}</strong> — {{ event.created_at|date:"d/m/Y H:i" }} · {{ event.actor.email|default:"Sistema" }}<p>{{ event.note|linebreaksbr }}</p></li>{% empty %}<li>Sem eventos registrados.</li>{% endfor %}</ol></section>
+{% if document_request.status == 'pending' or document_request.status == 'in_review' %}<section class="card"><h3>Atualizar solicitação</h3><form method="post" action="{% url 'request-update' document_request.pk %}" class="form-grid">{% csrf_token %}{{ form.as_p }}<button type="submit">Registrar atualização</button></form></section>{% endif %}
+<a href="{% url 'request-list' %}" class="button button-outline">Voltar às solicitações</a></div>
+{% endblock %}

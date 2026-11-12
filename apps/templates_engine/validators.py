@@ -3,6 +3,8 @@ from pathlib import Path
 
 from django.conf import settings
 
+from apps.templates_engine.services import validate_archive
+
 
 def detect_real_file_type(uploaded_file):
     position = uploaded_file.tell()
@@ -17,6 +19,7 @@ def detect_real_file_type(uploaded_file):
     if header.startswith(b"PK\x03\x04"):
         try:
             with zipfile.ZipFile(uploaded_file) as archive:
+                validate_archive(archive)
                 names = archive.namelist()
             if any(name.startswith("word/") for name in names):
                 uploaded_file.seek(position)
